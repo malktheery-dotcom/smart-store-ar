@@ -1,0 +1,25 @@
+{
+  "name": "SmartStore - متجر بوسلطان",
+  "short_name": "SmartStore",
+  "description": "متجر إلكتروني متكامل وعصري لتسوق أفضل المنتجات مع إمكانية إتمام الطلبات عبر واتساب والدفع عند الاستلام أو التحويل البنكي.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "dir": "rtl",
+  "lang": "ar",
+  "background_color": "#f8fafc",
+  "theme_color": "#2563eb",
+  "icons": [
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": [
+    "shopping",
+    "lifestyle"
+  ]
+}

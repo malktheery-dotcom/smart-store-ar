@@ -185,6 +185,57 @@ img {
   gap: 0.85rem;
 }
 
+/* زر تثبيت تطبيق الجوال (PWA) */
+.btn-install-pwa {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.65rem 1.15rem;
+  border-radius: var(--radius-full);
+  font-weight: 700;
+  font-size: 0.88rem;
+  color: #ffffff;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 3px 12px rgba(16, 185, 129, 0.35);
+  transition: all var(--transition-fast);
+  animation: pwaPulse 3s infinite ease-in-out;
+}
+
+.btn-install-pwa:hover {
+  background: linear-gradient(135deg, #059669 0%, #047857 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(16, 185, 129, 0.45);
+}
+
+.btn-install-pwa:active {
+  transform: translateY(0);
+}
+
+.btn-install-pwa svg {
+  flex-shrink: 0;
+  animation: pwaBounce 2s infinite ease-in-out;
+}
+
+@keyframes pwaPulse {
+  0%, 100% {
+    box-shadow: 0 3px 12px rgba(16, 185, 129, 0.35);
+  }
+  50% {
+    box-shadow: 0 4px 18px rgba(16, 185, 129, 0.6);
+  }
+}
+
+@keyframes pwaBounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-2px);
+  }
+}
+
 .btn-admin-link {
   display: inline-flex;
   align-items: center;
@@ -1229,11 +1280,13 @@ textarea.form-control {
     grid-template-columns: 1fr;
   }
   
-  .btn-admin-link span {
+  .btn-admin-link span,
+  .btn-install-pwa span {
     display: none;
   }
   
-  .btn-admin-link {
+  .btn-admin-link,
+  .btn-install-pwa {
     padding: 0.65rem;
   }
 }

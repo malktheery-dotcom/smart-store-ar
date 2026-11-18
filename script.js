@@ -219,6 +219,7 @@ const DOM = {
   cartDrawerCount: document.getElementById("cartDrawerCount"),
   checkoutOpenBtn: document.getElementById("checkoutOpenBtn"),
   clearCartBtn: document.getElementById("clearCartBtn"),
+  btnInstallPwa: document.getElementById("btnInstallPwa"),
 
   // بنر العروض الترويجي العلوي
   heroSection: document.getElementById("heroSection"),
@@ -339,6 +340,7 @@ function initApp() {
   syncSettingsFromSupabase();
   syncCouponsFromSupabase();
   setupSupabaseRealtime();
+  setupPwa();
 
   // تفعيل واجهة المتجر إن كانت الصفحة هي المتجر
   if (DOM.productsGrid) {
@@ -2386,3 +2388,80 @@ window.deleteCoupon = deleteCoupon;
 window.updateOrderStatus = updateOrderStatus;
 window.deleteOrder = deleteOrder;
 window.filterToSeasonOffers = filterToSeasonOffers;
+
+// ==========================================================================
+// 15. ميزات تطبيق الويب التقدمي (Progressive Web App - PWA)
+// ==========================================================================
+
+function setupPwa() {
+  // 1. تسجيل الـ Service Worker لتسريع التحميل والتخزين المؤقت
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => {
+      navigator.serviceWorker
+        .register("./service-worker.js")
+        .then((reg) => {
+          console.log("[PWA] Service Worker مسجل بنجاح في النطاق:", reg.scope);
+        })
+        .catch((err) => {
+          console.warn("[PWA] تعذر تسجيل Service Worker:", err);
+        });
+    });
+  }
+
+  // 2. إدارة زر تثبيت التطبيق على الجوال
+  const installBtn = DOM.btnInstallPwa;
+  if (!installBtn) return;
+
+  // التحقق إن كان المستخدم يتصفح التطبيق في وضع Standalone (مثبت بالفعل)
+  const isStandalone =
+    window.matchMedia("(display-mode: standalone)").matches ||
+    window.navigator.standalone === true ||
+    document.referrer.includes("android-app://");
+
+  if (isStandalone) {
+    installBtn.style.display = "none";
+    return;
+  }
+
+  let deferredPrompt = null;
+
+  // استقبال حدث التثبيت من المتصفح
+  window.addEventListener("beforeinstallprompt", (e) => {
+    // منع النافذة الافتراضية لعرض زرنا المخصص الأنيق
+    e.preventDefault();
+    deferredPrompt = e;
+    installBtn.style.display = "inline-flex";
+  });
+
+  // النقر على زر التثبيت
+  installBtn.addEventListener("click", async () => {
+    if (!deferredPrompt) {
+      // إرشاد بديل للأجهزة التي لا تدعم الحدث التلقائي (مثل Safari على iOS)
+      showToast(
+        'لتثبيت التطبيق على جهازك: اضغط على زر المشاركة أو خيارات المتصفح (⋮) ثم اختر "إضافة إلى الشاشة الرئيسية"',
+        "info"
+      );
+      return;
+    }
+
+    try {
+      deferredPrompt.prompt();
+      const choiceResult = await deferredPrompt.userChoice;
+      if (choiceResult && choiceResult.outcome === "accepted") {
+        showToast("شكراً لتثبيت متجر بوسلطان! يمكنك الآن فتحه مباشرة من شاشتك الرئيسية.", "success");
+        installBtn.style.display = "none";
+      }
+    } catch (err) {
+      console.warn("[PWA] خطأ أثناء إطلاق نافذة التثبيت:", err);
+    }
+    deferredPrompt = null;
+  });
+
+  // إخفاء الزر عند اكتمال التثبيت بنجاح
+  window.addEventListener("appinstalled", () => {
+    installBtn.style.display = "none";
+    deferredPrompt = null;
+    showToast("تم تثبيت تطبيق متجر بوسلطان بنجاح على جهازك! 🎉", "success");
+  });
+}
+
