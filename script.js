@@ -1,9 +1,24 @@
 /**
  * ==========================================================================
  * SmartStore - المنطق البرمجي للمتجر الرئيسي (JavaScript ES6+)
- * إدارة المنتجات، السلة التفاعلية، وإتمام الطلب عبر واتساب
+ * متصل بقاعدة بيانات Supabase السحابية مع مزامنة فورية وتخزين محلي احتياطي
  * ==========================================================================
  */
+
+// إعدادات وتكامل قاعدة بيانات Supabase السحابية
+const SUPABASE_CONFIG = {
+  URL: "https://azzptkuegktwajspzdad.supabase.co",
+  KEY: "sb_publishable_DnJWFF8yGYmIBSUMJNTStQ_gsD_xkcH"
+};
+
+let supabaseClient = null;
+if (typeof window !== "undefined" && window.supabase && typeof window.supabase.createClient === "function") {
+  try {
+    supabaseClient = window.supabase.createClient(SUPABASE_CONFIG.URL, SUPABASE_CONFIG.KEY);
+  } catch (err) {
+    console.warn("تعذر إنشاء اتصال Supabase:", err);
+  }
+}
 
 // مفاتيح التخزين وقيم الإعدادات الافتراضية
 const STORAGE_KEYS = {
@@ -269,6 +284,9 @@ document.addEventListener("DOMContentLoaded", () => {
 function initApp() {
   loadProducts();
   loadCart();
+  syncSettingsFromSupabase();
+  syncCouponsFromSupabase();
+  setupSupabaseRealtime();
 
   // تفعيل واجهة المتجر إن كانت الصفحة هي المتجر
   if (DOM.productsGrid) {
@@ -323,20 +341,49 @@ function initApp() {
 }
 
 /**
- * جلب المنتجات من LocalStorage أو تعيين المنتجات الافتراضية
+ * جلب المنتجات من سحابة Supabase مع استخدام الذاكرة المحلية كبديل فوري
  */
-function loadProducts() {
+async function loadProducts() {
+  loadProductsFromLocal();
+
+  if (supabaseClient) {
+    try {
+      const { data, error } = await supabaseClient
+        .from("products")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      if (!error && Array.isArray(data) && data.length > 0) {
+        products = data.map(item => ({
+          id: item.id,
+          name: item.name,
+          category: item.category,
+          categoryName: item.category_name || getCategoryLabel(item.category),
+          price: Number(item.price),
+          oldPrice: item.old_price ? Number(item.old_price) : null,
+          image: item.image,
+          description: item.description
+        }));
+        saveProducts();
+        if (DOM.productsGrid) renderProducts();
+        if (DOM.adminProductsTableBody) renderAdminProducts();
+      }
+    } catch (err) {
+      console.warn("خطأ في جلب المنتجات من Supabase:", err);
+    }
+  }
+}
+
+function loadProductsFromLocal() {
   const stored = localStorage.getItem(CONFIG.PRODUCTS_KEY);
   if (stored) {
     try {
       products = JSON.parse(stored);
-      // التأكد من أنها مصفوفة صالحة
       if (!Array.isArray(products) || products.length === 0) {
         products = [...DEFAULT_PRODUCTS];
         saveProducts();
       }
     } catch (e) {
-      console.error("خطأ في قراءة المنتجات:", e);
       products = [...DEFAULT_PRODUCTS];
       saveProducts();
     }
@@ -1036,7 +1083,7 @@ function updateAdminStats() {
 /**
  * معالجة حفظ المنتج (إضافة جديد أو تحديث موجود)
  */
-function handleAdminFormSubmit(e) {
+async function handleAdminFormSubmit(e) {
   e.preventDefault();
 
   const id = DOM.adminProductId.value;
@@ -1080,6 +1127,23 @@ function handleAdminFormSubmit(e) {
       cancelEdit();
       renderAdminProducts();
       showToast(`تم تحديث بيانات المنتج "${name}" بنجاح`, "success");
+
+      // مزامنة التحديث مع سحابة Supabase
+      if (supabaseClient) {
+        try {
+          await supabaseClient.from("products").update({
+            name,
+            category,
+            category_name: getCategoryLabel(category),
+            price,
+            old_price: oldPrice,
+            image,
+            description
+          }).eq("id", id);
+        } catch (err) {
+          console.error("خطأ تحديث المنتج في Supabase:", err);
+        }
+      }
     }
   } else {
     // وضع الإضافة (Add Mode)
@@ -1099,6 +1163,24 @@ function handleAdminFormSubmit(e) {
     updateImagePreview("");
     renderAdminProducts();
     showToast(`تمت إضافة المنتج الجديد "${name}" بنجاح!`, "success");
+
+    // الحفظ في سحابة Supabase
+    if (supabaseClient) {
+      try {
+        await supabaseClient.from("products").insert([{
+          id: newProduct.id,
+          name: newProduct.name,
+          category: newProduct.category,
+          category_name: getCategoryLabel(newProduct.category),
+          price: newProduct.price,
+          old_price: newProduct.oldPrice,
+          image: newProduct.image,
+          description: newProduct.description
+        }]);
+      } catch (err) {
+        console.error("خطأ إضافة المنتج إلى Supabase:", err);
+      }
+    }
   }
 }
 
@@ -1169,9 +1251,9 @@ function cancelEdit() {
 }
 
 /**
- * حذف منتج من لوحة التحكم والتخزين المحلي
+ * حذف منتج من لوحة التحكم والتخزين المحلي وقاعدة بيانات Supabase
  */
-function deleteProduct(productId) {
+async function deleteProduct(productId) {
   const product = products.find(p => p.id === productId);
   if (!product) return;
 
@@ -1189,19 +1271,47 @@ function deleteProduct(productId) {
 
     renderAdminProducts();
     showToast(`تم حذف المنتج "${product.name}" بنجاح`, "danger");
+
+    // الحذف من سحابة Supabase
+    if (supabaseClient) {
+      try {
+        await supabaseClient.from("products").delete().eq("id", productId);
+      } catch (err) {
+        console.error("خطأ حذف المنتج من Supabase:", err);
+      }
+    }
   }
 }
 
 /**
  * إعادة ضبط المنتجات الافتراضية الأولية
  */
-function resetDefaultProducts() {
+async function resetDefaultProducts() {
   if (confirm("هل تريد استعادة قائمة المنتجات الافتراضية الـ 6؟ سيتم استبدال أي تغييرات حالية.")) {
     products = [...DEFAULT_PRODUCTS];
     saveProducts();
     cancelEdit();
     renderAdminProducts();
     showToast("تمت استعادة المنتجات الافتراضية بنجاح!", "info");
+
+    // الاستعادة في سحابة Supabase
+    if (supabaseClient) {
+      try {
+        await supabaseClient.from("products").delete().neq("id", "none");
+        await supabaseClient.from("products").insert(DEFAULT_PRODUCTS.map(p => ({
+          id: p.id,
+          name: p.name,
+          category: p.category,
+          category_name: p.categoryName,
+          price: p.price,
+          old_price: p.oldPrice,
+          image: p.image,
+          description: p.description
+        })));
+      } catch (err) {
+        console.error("خطأ إعادة ضبط المنتجات في Supabase:", err);
+      }
+    }
   }
 }
 
@@ -1303,6 +1413,18 @@ function setupStoreSettings() {
       // تحديث الجدول والإحصائيات بالعملة الجديدة فوراً
       renderAdminProducts();
       showToast("تم حفظ إعدادات المتجر وتحديث العملة ورقم الواتساب بنجاح!", "success");
+
+      // المزامنة والحفظ في سحابة Supabase
+      if (supabaseClient) {
+        supabaseClient.from("settings").upsert({
+          id: "general",
+          store_phone: phone,
+          currency: currency,
+          updated_at: new Date().toISOString()
+        }).then(({ error }) => {
+          if (error) console.error("خطأ حفظ إعدادات Supabase:", error);
+        });
+      }
     });
   }
 
@@ -1471,6 +1593,13 @@ function setupCouponAdmin() {
       DOM.couponForm.reset();
       renderAdminCoupons();
       showToast(`تم إنشاء وتفعيل الكوبون (${code}) بنسبة خصم ${discount}% بنجاح!`, "success");
+
+      // الحفظ في سحابة Supabase
+      if (supabaseClient) {
+        supabaseClient.from("coupons").insert([{ code, discount }]).then(({ error }) => {
+          if (error) console.error("خطأ إضافة الكوبون في Supabase:", error);
+        });
+      }
     });
   }
 }
@@ -1534,6 +1663,88 @@ function deleteCoupon(code) {
 
     renderAdminCoupons();
     showToast(`تم حذف الكوبون (${code}) بنجاح.`, "danger");
+
+    // الحذف من سحابة Supabase
+    if (supabaseClient) {
+      supabaseClient.from("coupons").delete().eq("code", code).then(({ error }) => {
+        if (error) console.error("خطأ حذف الكوبون من Supabase:", error);
+      });
+    }
+  }
+}
+
+// ==========================================================================
+// 11. وظائف المزامنة السحابية اللحظية مع Supabase (Realtime & Sync)
+// ==========================================================================
+
+async function syncSettingsFromSupabase() {
+  if (supabaseClient) {
+    try {
+      const { data, error } = await supabaseClient
+        .from("settings")
+        .select("*")
+        .eq("id", "general")
+        .maybeSingle();
+
+      if (!error && data) {
+        storeSettings = {
+          storePhone: data.store_phone || DEFAULT_SETTINGS.storePhone,
+          currency: data.currency || DEFAULT_SETTINGS.currency
+        };
+        saveStoreSettings(storeSettings);
+        if (DOM.storeSettingsForm) populateStoreSettingsForm();
+        if (DOM.productsGrid) {
+          renderProducts();
+          updateCartUI();
+        }
+        if (DOM.adminProductsTableBody) renderAdminProducts();
+      }
+    } catch (err) {
+      console.warn("خطأ مزامنة إعدادات Supabase:", err);
+    }
+  }
+}
+
+async function syncCouponsFromSupabase() {
+  if (supabaseClient) {
+    try {
+      const { data, error } = await supabaseClient
+        .from("coupons")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      if (!error && Array.isArray(data) && data.length > 0) {
+        const mapped = data.map(c => ({
+          code: c.code,
+          discount: Number(c.discount)
+        }));
+        saveCoupons(mapped);
+        if (DOM.couponsTableBody) renderAdminCoupons();
+        if (DOM.productsGrid) updateCartUI();
+      }
+    } catch (err) {
+      console.warn("خطأ مزامنة كوبونات Supabase:", err);
+    }
+  }
+}
+
+function setupSupabaseRealtime() {
+  if (!supabaseClient) return;
+  try {
+    supabaseClient
+      .channel("smartstore_db_changes")
+      .on("postgres_changes", { event: "*", schema: "public", table: "products" }, () => {
+        loadProducts();
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "settings" }, () => {
+        syncSettingsFromSupabase();
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "coupons" }, () => {
+        syncCouponsFromSupabase();
+      })
+      .subscribe();
+  } catch (err) {
+    console.warn("تعذر تفعيل Supabase Realtime:", err);
   }
 }
 
