@@ -342,6 +342,33 @@ img {
   color: var(--accent);
 }
 
+.hero-actions {
+  margin-top: 1.5rem;
+}
+
+.btn-hero-offers {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.85rem 1.85rem;
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  color: #fff;
+  border-radius: var(--radius-full);
+  font-weight: 800;
+  font-size: 1rem;
+  box-shadow: 0 4px 14px rgba(217, 119, 6, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  cursor: pointer;
+  transition: all var(--transition-normal);
+  user-select: none;
+}
+
+.btn-hero-offers:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(217, 119, 6, 0.55);
+  background: linear-gradient(135deg, #fbbf24, #b45309);
+}
+
 /* ==========================================================================
    أزرار وتصنيفات التصفية (Categories Filter)
    ========================================================================== */

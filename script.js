@@ -35,7 +35,11 @@ const DEFAULT_SETTINGS = {
   currency: "ر.س",
   codEnabled: true,
   bankEnabled: true,
-  bankDetails: "البنك الأهلي السعودي: SA1234567890123456789012 (باسم: متجر بوسلطان)\nمصرف الراجحي: SA9876543210987654321098\nمحفظة STC Pay / كاش: 0501234567"
+  bankDetails: "البنك الأهلي السعودي: SA1234567890123456789012 (باسم: متجر بوسلطان)\nمصرف الراجحي: SA9876543210987654321098\nمحفظة STC Pay / كاش: 0501234567",
+  bannerEnabled: true,
+  bannerBadge: "عروض الموسم الحصرية",
+  bannerTitle: "تسوق أفضل المنتجات العصرية <span>بضغطة زر واحدة</span>",
+  bannerSubtitle: "اكتشف تشكيلتنا المختارة بعناية من أحدث الإلكترونيات، العطور الفاخرة، والأزياء، مع إمكانية إتمام طلبك فوراً وبسهولة عبر واتساب."
 };
 
 const DEFAULT_PIN = "1234";
@@ -116,6 +120,10 @@ const CONFIG = {
   get COD_ENABLED() { return storeSettings.codEnabled !== false; },
   get BANK_ENABLED() { return storeSettings.bankEnabled !== false; },
   get BANK_DETAILS() { return storeSettings.bankDetails || DEFAULT_SETTINGS.bankDetails; },
+  get BANNER_ENABLED() { return storeSettings.bannerEnabled !== false; },
+  get BANNER_BADGE() { return storeSettings.bannerBadge || DEFAULT_SETTINGS.bannerBadge; },
+  get BANNER_TITLE() { return storeSettings.bannerTitle || DEFAULT_SETTINGS.bannerTitle; },
+  get BANNER_SUBTITLE() { return storeSettings.bannerSubtitle || DEFAULT_SETTINGS.bannerSubtitle; },
   PRODUCTS_KEY: STORAGE_KEYS.PRODUCTS,
   CART_KEY: STORAGE_KEYS.CART,
   SETTINGS_KEY: STORAGE_KEYS.SETTINGS,
@@ -211,6 +219,13 @@ const DOM = {
   cartDrawerCount: document.getElementById("cartDrawerCount"),
   checkoutOpenBtn: document.getElementById("checkoutOpenBtn"),
   clearCartBtn: document.getElementById("clearCartBtn"),
+
+  // بنر العروض الترويجي العلوي
+  heroSection: document.getElementById("heroSection"),
+  heroBadgeText: document.getElementById("heroBadgeText"),
+  heroTitleText: document.getElementById("heroTitleText"),
+  heroSubtitleText: document.getElementById("heroSubtitleText"),
+  btnHeroOffers: document.getElementById("btnHeroOffers"),
   
   // مودال إتمام الطلب
   checkoutModal: document.getElementById("checkoutModal"),
@@ -229,6 +244,7 @@ const DOM = {
   adminProductPrice: document.getElementById("adminProductPrice"),
   adminProductOldPrice: document.getElementById("adminProductOldPrice"),
   adminProductCategory: document.getElementById("adminProductCategory"),
+  adminProductIsOffer: document.getElementById("adminProductIsOffer"),
   adminProductImage: document.getElementById("adminProductImage"),
   adminProductDesc: document.getElementById("adminProductDesc"),
   adminImagePreview: document.getElementById("adminImagePreview"),
@@ -257,6 +273,14 @@ const DOM = {
   settingsCodEnabled: document.getElementById("settingsCodEnabled"),
   settingsBankEnabled: document.getElementById("settingsBankEnabled"),
   settingsBankDetails: document.getElementById("settingsBankDetails"),
+
+  // إدارة بنر عروض الموسم
+  bannerSettingsSection: document.getElementById("bannerSettingsSection"),
+  bannerSettingsForm: document.getElementById("bannerSettingsForm"),
+  settingsBannerEnabled: document.getElementById("settingsBannerEnabled"),
+  settingsBannerBadge: document.getElementById("settingsBannerBadge"),
+  settingsBannerTitle: document.getElementById("settingsBannerTitle"),
+  settingsBannerSubtitle: document.getElementById("settingsBannerSubtitle"),
   changePinModal: document.getElementById("changePinModal"),
   btnOpenChangePin: document.getElementById("btnOpenChangePin"),
   closePinModalBtn: document.getElementById("closePinModalBtn"),
@@ -321,6 +345,7 @@ function initApp() {
     setupEventListeners();
     setupCartCouponEvents();
     setupCheckoutPaymentEvents();
+    renderHeroBanner();
     renderProducts();
     updateCartUI();
   }
@@ -331,6 +356,9 @@ function initApp() {
   }
   if (DOM.storeSettingsForm) {
     setupStoreSettings();
+  }
+  if (DOM.bannerSettingsForm) {
+    setupBannerSettings();
   }
   if (DOM.couponForm) {
     setupCouponAdmin();
@@ -361,12 +389,16 @@ function initApp() {
     }
     if (e.key === CONFIG.SETTINGS_KEY) {
       storeSettings = loadStoreSettings();
+      if (DOM.heroSection) renderHeroBanner();
       if (DOM.productsGrid) {
         renderProducts();
         updateCartUI();
       }
       if (DOM.storeSettingsForm) {
         populateStoreSettingsForm();
+      }
+      if (DOM.bannerSettingsForm) {
+        populateBannerSettingsForm();
       }
       if (DOM.adminProductForm) {
         renderAdminProducts();
@@ -462,6 +494,7 @@ function saveCart() {
 // ==========================================================================
 function setupEventListeners() {
   // أزرار التصنيفات
+  DOM.categoryButtons = document.querySelectorAll(".category-btn");
   DOM.categoryButtons.forEach(btn => {
     btn.addEventListener("click", () => {
       DOM.categoryButtons.forEach(b => b.classList.remove("active"));
@@ -470,6 +503,11 @@ function setupEventListeners() {
       renderProducts();
     });
   });
+
+  // زر تصفح عروض الموسم في البنر العلوي
+  if (DOM.btnHeroOffers) {
+    DOM.btnHeroOffers.addEventListener("click", filterToSeasonOffers);
+  }
 
   // البحث الفوري
   if (DOM.searchQueryInput) {
@@ -532,14 +570,60 @@ function setupEventListeners() {
 }
 
 // ==========================================================================
-// 3. عرض المنتجات في الشبكة (Render Products)
+// 3. عرض البنر العلوي والمنتجات في الشبكة (Render Banner & Products)
 // ==========================================================================
+
+function renderHeroBanner() {
+  if (!DOM.heroSection) return;
+
+  if (CONFIG.BANNER_ENABLED) {
+    DOM.heroSection.style.display = "";
+    if (DOM.heroBadgeText) DOM.heroBadgeText.textContent = CONFIG.BANNER_BADGE;
+    if (DOM.heroTitleText) DOM.heroTitleText.innerHTML = CONFIG.BANNER_TITLE;
+    if (DOM.heroSubtitleText) DOM.heroSubtitleText.textContent = CONFIG.BANNER_SUBTITLE;
+  } else {
+    DOM.heroSection.style.display = "none";
+  }
+}
+
+function filterToSeasonOffers() {
+  activeCategory = "offers";
+
+  DOM.categoryButtons = document.querySelectorAll(".category-btn");
+  if (DOM.categoryButtons) {
+    DOM.categoryButtons.forEach(btn => {
+      if (btn.getAttribute("data-category") === "offers") {
+        btn.classList.add("active");
+      } else {
+        btn.classList.remove("active");
+      }
+    });
+  }
+
+  renderProducts();
+
+  const target = document.getElementById("productsSection") || DOM.productsGrid;
+  if (target) {
+    target.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  showToast("تم تصفية المنتجات: عرض عروض وتخفيضات الموسم الحصرية 🔥", "info");
+}
+
 function renderProducts() {
   if (!DOM.productsGrid) return;
 
   // تصفية حسب التصنيف والبحث
   const filtered = products.filter(item => {
-    const matchCategory = activeCategory === "all" || item.category === activeCategory;
+    let matchCategory = false;
+    if (activeCategory === "all") {
+      matchCategory = true;
+    } else if (activeCategory === "offers") {
+      matchCategory = item.category === "offers" || (item.oldPrice && Number(item.oldPrice) > Number(item.price));
+    } else {
+      matchCategory = item.category === activeCategory;
+    }
+
     const matchSearch = item.name.toLowerCase().includes(searchQuery) || 
                         (item.description && item.description.toLowerCase().includes(searchQuery));
     return matchCategory && matchSearch;
@@ -609,7 +693,8 @@ function getCategoryLabel(catKey) {
     electronics: "إلكترونيات",
     perfumes: "عطور",
     fashion: "أزياء",
-    accessories: "إكسسوارات"
+    accessories: "إكسسوارات",
+    offers: "عروض الموسم 🔥"
   };
   return map[catKey] || catKey || "عام";
 }
@@ -1177,6 +1262,27 @@ function setupAdminEventListeners() {
       renderAdminProducts();
     });
   }
+
+  // مزامنة تصنيف عروض الموسم مع مفتاح تمييز المنتج
+  if (DOM.adminProductCategory) {
+    DOM.adminProductCategory.addEventListener("change", () => {
+      if (DOM.adminProductIsOffer) {
+        if (DOM.adminProductCategory.value === "offers") {
+          DOM.adminProductIsOffer.checked = true;
+        }
+      }
+    });
+  }
+
+  if (DOM.adminProductIsOffer) {
+    DOM.adminProductIsOffer.addEventListener("change", () => {
+      if (DOM.adminProductIsOffer.checked && DOM.adminProductCategory) {
+        if (DOM.adminProductCategory.value !== "offers") {
+          DOM.adminProductCategory.value = "offers";
+        }
+      }
+    });
+  }
 }
 
 /**
@@ -1215,7 +1321,15 @@ function renderAdminProducts() {
 
   // تصفية المنتجات
   const filtered = products.filter(product => {
-    const matchCat = categoryFilter === "all" || product.category === categoryFilter;
+    let matchCat = false;
+    if (categoryFilter === "all") {
+      matchCat = true;
+    } else if (categoryFilter === "offers") {
+      matchCat = product.category === "offers" || (product.oldPrice && Number(product.oldPrice) > Number(product.price));
+    } else {
+      matchCat = product.category === categoryFilter;
+    }
+
     const matchSearch = product.name.toLowerCase().includes(searchQuery) ||
                         (product.description && product.description.toLowerCase().includes(searchQuery)) ||
                         product.id.toLowerCase().includes(searchQuery);
@@ -1313,13 +1427,19 @@ async function handleAdminFormSubmit(e) {
   const price = parseFloat(DOM.adminProductPrice.value);
   const oldPriceRaw = DOM.adminProductOldPrice.value.trim();
   const oldPrice = oldPriceRaw ? parseFloat(oldPriceRaw) : null;
-  const category = DOM.adminProductCategory.value;
+  let category = DOM.adminProductCategory.value;
   const image = DOM.adminProductImage.value.trim();
   const description = DOM.adminProductDesc.value.trim();
+  const isOfferChecked = DOM.adminProductIsOffer && DOM.adminProductIsOffer.checked;
 
   if (!name || isNaN(price) || !image) {
     showToast("يرجى التأكد من ملء الاسم، السعر، ورابط الصورة!", "danger");
     return;
+  }
+
+  // إذا تم تمييز المنتج ضمن عروض الموسم ولم يختر المستخدم offers كتصنيف، نجعله offers لضمان التوافق التام
+  if (isOfferChecked && category !== "offers") {
+    category = "offers";
   }
 
   if (id) {
@@ -1382,6 +1502,7 @@ async function handleAdminFormSubmit(e) {
     products.unshift(newProduct);
     saveProducts();
     DOM.adminProductForm.reset();
+    if (DOM.adminProductIsOffer) DOM.adminProductIsOffer.checked = false;
     updateImagePreview("");
     renderAdminProducts();
     showToast(`تمت إضافة المنتج الجديد "${name}" بنجاح!`, "success");
@@ -1421,6 +1542,10 @@ function editProduct(productId) {
   DOM.adminProductImage.value = product.image;
   DOM.adminProductDesc.value = product.description || "";
 
+  // تعيين حالة اختيار عروض الموسم
+  const isOffer = product.category === "offers" || (product.oldPrice && Number(product.oldPrice) > Number(product.price));
+  if (DOM.adminProductIsOffer) DOM.adminProductIsOffer.checked = Boolean(isOffer);
+
   updateImagePreview(product.image);
 
   if (DOM.adminFormTitle) {
@@ -1451,6 +1576,7 @@ function editProduct(productId) {
 function cancelEdit() {
   DOM.adminProductId.value = "";
   DOM.adminProductForm.reset();
+  if (DOM.adminProductIsOffer) DOM.adminProductIsOffer.checked = false;
   updateImagePreview("");
 
   if (DOM.adminFormTitle) {
@@ -1719,6 +1845,56 @@ function populateStoreSettingsForm() {
   if (DOM.settingsBankDetails) DOM.settingsBankDetails.value = storeSettings.bankDetails || DEFAULT_SETTINGS.bankDetails;
 }
 
+// ==========================================================================
+// 9.1 إدارة بنر عروض الموسم (Hero Banner Settings)
+// ==========================================================================
+
+function setupBannerSettings() {
+  populateBannerSettingsForm();
+
+  if (DOM.bannerSettingsForm) {
+    DOM.bannerSettingsForm.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const enabled = DOM.settingsBannerEnabled ? DOM.settingsBannerEnabled.checked : true;
+      const badge = DOM.settingsBannerBadge ? DOM.settingsBannerBadge.value.trim() : DEFAULT_SETTINGS.bannerBadge;
+      const title = DOM.settingsBannerTitle ? DOM.settingsBannerTitle.value.trim() : DEFAULT_SETTINGS.bannerTitle;
+      const subtitle = DOM.settingsBannerSubtitle ? DOM.settingsBannerSubtitle.value.trim() : DEFAULT_SETTINGS.bannerSubtitle;
+
+      storeSettings = {
+        ...storeSettings,
+        bannerEnabled: enabled,
+        bannerBadge: badge,
+        bannerTitle: title,
+        bannerSubtitle: subtitle
+      };
+      saveStoreSettings(storeSettings);
+
+      showToast("تم حفظ وتحديث إعدادات بنر عروض الموسم بنجاح!", "success");
+
+      // المزامنة والحفظ في سحابة Supabase
+      if (supabaseClient) {
+        supabaseClient.from("settings").upsert({
+          id: "general",
+          banner_enabled: enabled,
+          banner_badge: badge,
+          banner_title: title,
+          banner_subtitle: subtitle,
+          updated_at: new Date().toISOString()
+        }).then(({ error }) => {
+          if (error) console.error("خطأ حفظ إعدادات البنر في Supabase:", error);
+        });
+      }
+    });
+  }
+}
+
+function populateBannerSettingsForm() {
+  if (DOM.settingsBannerEnabled) DOM.settingsBannerEnabled.checked = storeSettings.bannerEnabled !== false;
+  if (DOM.settingsBannerBadge) DOM.settingsBannerBadge.value = storeSettings.bannerBadge || DEFAULT_SETTINGS.bannerBadge;
+  if (DOM.settingsBannerTitle) DOM.settingsBannerTitle.value = storeSettings.bannerTitle || DEFAULT_SETTINGS.bannerTitle;
+  if (DOM.settingsBannerSubtitle) DOM.settingsBannerSubtitle.value = storeSettings.bannerSubtitle || DEFAULT_SETTINGS.bannerSubtitle;
+}
+
 function openChangePinModal() {
   if (!DOM.changePinModal) return;
   DOM.changePinForm.reset();
@@ -1929,10 +2105,16 @@ async function syncSettingsFromSupabase() {
           currency: data.currency || DEFAULT_SETTINGS.currency,
           codEnabled: data.cod_enabled !== false,
           bankEnabled: data.bank_enabled !== false,
-          bankDetails: data.bank_details || DEFAULT_SETTINGS.bankDetails
+          bankDetails: data.bank_details || DEFAULT_SETTINGS.bankDetails,
+          bannerEnabled: data.banner_enabled !== false,
+          bannerBadge: data.banner_badge || DEFAULT_SETTINGS.bannerBadge,
+          bannerTitle: data.banner_title || DEFAULT_SETTINGS.bannerTitle,
+          bannerSubtitle: data.banner_subtitle || DEFAULT_SETTINGS.bannerSubtitle
         };
         saveStoreSettings(storeSettings);
         if (DOM.storeSettingsForm) populateStoreSettingsForm();
+        if (DOM.bannerSettingsForm) populateBannerSettingsForm();
+        if (DOM.heroSection) renderHeroBanner();
         if (DOM.productsGrid) {
           renderProducts();
           updateCartUI();
@@ -2203,3 +2385,4 @@ window.removeAppliedCoupon = removeAppliedCoupon;
 window.deleteCoupon = deleteCoupon;
 window.updateOrderStatus = updateOrderStatus;
 window.deleteOrder = deleteOrder;
+window.filterToSeasonOffers = filterToSeasonOffers;

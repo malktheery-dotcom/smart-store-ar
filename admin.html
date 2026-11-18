@@ -298,6 +298,75 @@
         </div>
       </section>
 
+      <!-- بطاقة إدارة بنر عروض الموسم -->
+      <section class="admin-card" id="bannerSettingsSection">
+        <div class="admin-card-header">
+          <h2 class="admin-card-title">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+            </svg>
+            <span>إدارة بنر عروض الموسم</span>
+          </h2>
+          <span style="font-size: 0.85rem; color: var(--text-muted);">تحكم بظهور ونصوص البنر الترويجي أعلى الصفحة الرئيسية</span>
+        </div>
+
+        <div class="admin-card-body">
+          <form id="bannerSettingsForm">
+            <!-- مفتاح تفعيل/تعطيل البنر -->
+            <div class="toggle-wrapper" style="margin-bottom: 1.25rem;">
+              <div class="toggle-info">
+                <span class="toggle-title">تفعيل وإظهار البنر العلوي في المتجر</span>
+                <span class="toggle-subtitle">عند التعطيل، يختفي البنر بالكامل تلقائياً من الصفحة الرئيسية</span>
+              </div>
+              <label class="switch">
+                <input type="checkbox" id="settingsBannerEnabled" checked>
+                <span class="slider"></span>
+              </label>
+            </div>
+
+            <div class="form-grid-2">
+              <!-- نص الشارة الصغيرة -->
+              <div class="form-group">
+                <label for="settingsBannerBadge" class="form-label">نص الشارة الصغيرة <span class="req">*</span></label>
+                <input type="text" id="settingsBannerBadge" class="form-control" placeholder="مثال: عروض الموسم الحصرية" required>
+                <small style="color: var(--text-muted); font-size: 0.82rem; margin-top: 0.35rem; display: block;">
+                  تظهر كشارة مميزة أعلى العنوان الرئيسي في البنر.
+                </small>
+              </div>
+
+              <!-- العنوان الرئيسي -->
+              <div class="form-group">
+                <label for="settingsBannerTitle" class="form-label">العنوان الرئيسي للبنر <span class="req">*</span></label>
+                <input type="text" id="settingsBannerTitle" class="form-control" placeholder="مثال: تسوق أفضل المنتجات بضغطة زر واحدة" required>
+                <small style="color: var(--text-muted); font-size: 0.82rem; margin-top: 0.35rem; display: block;">
+                  العنوان البارز للزوار عند فتح المتجر.
+                </small>
+              </div>
+            </div>
+
+            <!-- النص الفرعي / الوصف -->
+            <div class="form-group">
+              <label for="settingsBannerSubtitle" class="form-label">النص الفرعي / الوصف الترويجي <span class="req">*</span></label>
+              <textarea id="settingsBannerSubtitle" class="form-control" rows="2" placeholder="مثال: اكتشف تشكيلتنا المميزة بأفضل الأسعار وتوصيل سريع لباب منزلك" required></textarea>
+              <small style="color: var(--text-muted); font-size: 0.82rem; margin-top: 0.35rem; display: block;">
+                شرح توضيحي للحملة التسويقية أو العروض المعروضة.
+              </small>
+            </div>
+
+            <div class="form-actions">
+              <button type="submit" class="btn-primary">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                  <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                  <polyline points="7 3 7 8 15 8"></polyline>
+                </svg>
+                <span>حفظ إعدادات بنر العروض</span>
+              </button>
+            </div>
+          </form>
+        </div>
+      </section>
+
       <!-- بطاقة إدارة الطلبات الواردة (Orders Management) -->
       <section class="admin-card" id="ordersSection">
         <div class="admin-card-header">
@@ -441,6 +510,7 @@
                   <option value="perfumes">عطور</option>
                   <option value="fashion">أزياء</option>
                   <option value="accessories">إكسسوارات</option>
+                  <option value="offers">عروض الموسم 🔥</option>
                 </select>
               </div>
 
@@ -477,6 +547,25 @@
               <div class="form-group form-grid-full">
                 <label for="adminProductDesc" class="form-label">وصف مختصر للمنتج</label>
                 <textarea id="adminProductDesc" class="form-control" placeholder="اكتب نبذة موجزة ومميزات المنتج الرئيسية..." rows="3"></textarea>
+              </div>
+            </div>
+
+            <!-- خيار تمييز المنتج ضمن عروض الموسم -->
+            <div style="margin-bottom: 1.25rem;">
+              <div class="toggle-wrapper" style="background-color: #fffdf5; border-color: #fde68a;">
+                <div class="toggle-info">
+                  <span class="toggle-title" style="display: flex; align-items: center; gap: 0.4rem; color: #b45309;">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+                    </svg>
+                    <span>تمييز هذا المنتج ضمن "عروض الموسم"</span>
+                  </span>
+                  <span class="toggle-subtitle">يظهر المنتج مباشرة عند ضغط الزائر على زر عروض الموسم في البنر وتصنيف العروض</span>
+                </div>
+                <label class="switch">
+                  <input type="checkbox" id="adminProductIsOffer">
+                  <span class="slider"></span>
+                </label>
               </div>
             </div>
 
@@ -536,6 +625,7 @@
               <option value="perfumes">عطور</option>
               <option value="fashion">أزياء</option>
               <option value="accessories">إكسسوارات</option>
+              <option value="offers">عروض الموسم 🔥</option>
             </select>
           </div>
         </div>
