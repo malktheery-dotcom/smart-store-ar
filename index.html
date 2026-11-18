@@ -307,6 +307,51 @@
             <textarea id="customerNotes" class="form-control" placeholder="أي تعليمات خاصة بالتسليم أو المقاسات..."></textarea>
           </div>
 
+          <!-- قسم اختيار طريقة الدفع المتاحة -->
+          <div class="form-group" id="paymentSelectionGroup">
+            <label class="form-label">طريقة الدفع المتاحة <span class="req">*</span></label>
+            <div class="payment-methods-grid" id="paymentMethodsGrid">
+              <!-- خيار الدفع عند الاستلام -->
+              <label class="payment-method-card active" id="payMethodCodCard">
+                <input type="radio" name="orderPaymentMethod" value="الدفع عند الاستلام" class="payment-method-radio" id="payMethodCod" checked>
+                <div class="payment-method-info">
+                  <span class="payment-method-title">الدفع عند الاستلام</span>
+                  <span class="payment-method-desc">السداد نقداً أو بالشبكة عند استلام الطلب</span>
+                </div>
+              </label>
+
+              <!-- خيار التحويل البنكي / المحفظة -->
+              <label class="payment-method-card" id="payMethodBankCard">
+                <input type="radio" name="orderPaymentMethod" value="التحويل البنكي / المحفظة الإلكترونية" class="payment-method-radio" id="payMethodBank">
+                <div class="payment-method-info">
+                  <span class="payment-method-title">التحويل البنكي / المحفظة</span>
+                  <span class="payment-method-desc">تحويل مباشر لحسابنا البنكي أو المحفظة</span>
+                </div>
+              </label>
+            </div>
+
+            <!-- صندوق تفاصيل الحسابات البنكية وزر النسخ السريع -->
+            <div id="bankDetailsCheckoutBox" class="bank-info-box" style="display: none;">
+              <div class="bank-info-header">
+                <span>بيانات الحسابات المعتمدة للتحويل:</span>
+                <button type="button" id="btnCopyBankDetails" class="btn-copy-bank" title="نسخ بيانات الحساب البنكي">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                  </svg>
+                  <span>نسخ الحساب</span>
+                </button>
+              </div>
+              <div id="bankDetailsDisplay" class="bank-info-details"></div>
+              
+              <!-- حقل إجباري لإدخال رقم الحوالة أو اسم المحول -->
+              <div style="margin-top: 0.85rem;">
+                <label for="transferReference" class="form-label" style="font-size: 0.88rem; margin-bottom: 0.35rem;">رقم الحوالة أو اسم المحول <span class="req">*</span></label>
+                <input type="text" id="transferReference" class="form-control" placeholder="أدخل رقم عملية التحويل أو اسم المحول كاملاً">
+              </div>
+            </div>
+          </div>
+
           <button type="submit" class="btn-submit-order">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
               <path d="M12.04 2c-5.46 0-9.91 4.45-9.91 9.91 0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.816 9.816 0 0 0 12.04 2m.01 1.67c4.54 0 8.24 3.7 8.24 8.24 0 2.2-.86 4.28-2.42 5.84a8.183 8.183 0 0 1-5.82 2.41h-.01c-1.48 0-2.93-.39-4.2-1.15l-.3-.18-3.12.82.83-3.04-.2-.31a8.196 8.196 0 0 1-1.26-4.38c0-4.54 3.7-8.24 8.24-8.24"/>

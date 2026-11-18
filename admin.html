@@ -174,6 +174,22 @@
             <span class="stat-label">متوسط الأسعار</span>
           </div>
         </div>
+
+        <div class="stat-card">
+          <div class="stat-icon purple">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              <polyline points="14 2 14 8 20 8"></polyline>
+              <line x1="16" y1="13" x2="8" y2="13"></line>
+              <line x1="16" y1="17" x2="8" y2="17"></line>
+              <polyline points="10 9 9 9 8 9"></polyline>
+            </svg>
+          </div>
+          <div class="stat-details">
+            <span id="statTotalOrders" class="stat-value">0</span>
+            <span class="stat-label">إجمالي الطلبات الواردة</span>
+          </div>
+        </div>
       </div>
 
       <!-- بطاقة إعدادات المتجر العامة -->
@@ -211,6 +227,55 @@
               </div>
             </div>
 
+            <!-- خيارات وطرق الدفع للمتجر -->
+            <div style="margin-top: 1.5rem; margin-bottom: 1.5rem; border-top: 1px solid var(--border); padding-top: 1.25rem;">
+              <h3 style="font-size: 1.05rem; font-weight: 800; margin-bottom: 1rem; color: var(--dark); display: flex; align-items: center; gap: 0.5rem;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect>
+                  <line x1="1" y1="10" x2="23" y2="10"></line>
+                </svg>
+                <span>خيارات وطرق الدفع للمتجر</span>
+              </h3>
+
+              <div class="form-grid-2">
+                <!-- مفتاح تفعيل الدفع عند الاستلام -->
+                <div class="toggle-wrapper">
+                  <div class="toggle-info">
+                    <span class="toggle-title">الدفع عند الاستلام (COD)</span>
+                    <span class="toggle-subtitle">إتاحة السداد نقداً أو بالشبكة عند استلام الطلب</span>
+                  </div>
+                  <label class="switch">
+                    <input type="checkbox" id="settingsCodEnabled" checked>
+                    <span class="slider"></span>
+                  </label>
+                </div>
+
+                <!-- مفتاح تفعيل التحويل البنكي والمحافظ -->
+                <div class="toggle-wrapper">
+                  <div class="toggle-info">
+                    <span class="toggle-title">التحويل البنكي / المحافظ الإلكترونية</span>
+                    <span class="toggle-subtitle">عرض أرقام الحسابات وإلزام العميل بإرفاق رقم الحوالة</span>
+                  </div>
+                  <label class="switch">
+                    <input type="checkbox" id="settingsBankEnabled" checked>
+                    <span class="slider"></span>
+                  </label>
+                </div>
+              </div>
+
+              <!-- تفاصيل الحسابات البنكية -->
+              <div class="form-group" id="bankDetailsGroup" style="margin-top: 1.25rem;">
+                <label for="settingsBankDetails" class="form-label">تفاصيل وبيانات الحسابات البنكية والمحافظ الإلكترونية</label>
+                <textarea id="settingsBankDetails" class="form-control" rows="4" placeholder="اكتب أرقام الآيبان وأسماء البنوك أو المحافظ الإلكترونية هنا، مثال:
+البنك الأهلي: SA1234567890123456789012 (باسم: متجر بوسلطان)
+مصرف الراجحي: SA9876543210987654321098
+محفظة STC Pay أو محفظة جوال: 0501234567"></textarea>
+                <small style="color: var(--text-muted); font-size: 0.82rem; margin-top: 0.35rem; display: block;">
+                  تظهر هذه البيانات للعميل عند اختياره الدفع عبر التحويل البنكي مع زر نسخ سريع للحساب.
+                </small>
+              </div>
+            </div>
+
             <div class="form-actions" style="justify-content: space-between; flex-wrap: wrap;">
               <button type="submit" class="btn-primary">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
@@ -230,6 +295,51 @@
               </button>
             </div>
           </form>
+        </div>
+      </section>
+
+      <!-- بطاقة إدارة الطلبات الواردة (Orders Management) -->
+      <section class="admin-card" id="ordersSection">
+        <div class="admin-card-header">
+          <h2 class="admin-card-title">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path>
+              <line x1="3" y1="6" x2="21" y2="6"></line>
+              <path d="M16 10a4 4 0 0 1-8 0"></path>
+            </svg>
+            <span>سجل وإدارة الطلبات الواردة</span>
+          </h2>
+          <div style="display: flex; align-items: center; gap: 0.75rem;">
+            <span id="ordersCountBadge" style="background-color: var(--primary-light); color: var(--primary); font-size: 0.85rem; font-weight: 800; padding: 0.3rem 0.75rem; border-radius: var(--radius-full);">0 طلب</span>
+            <button type="button" id="btnRefreshOrders" class="btn-secondary" style="padding: 0.45rem 0.85rem; font-size: 0.85rem;" title="تحديث قائمة الطلبات من السحابة">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
+              </svg>
+              <span>تحديث</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="admin-card-body" style="padding: 1.25rem;">
+          <div class="admin-table-container">
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th style="width: 80px;">رقم الطلب</th>
+                  <th>بيانات العميل</th>
+                  <th>المنتجات المطلوبة</th>
+                  <th>المبلغ وطريقة الدفع</th>
+                  <th>رقم الحوالة</th>
+                  <th>التاريخ</th>
+                  <th style="width: 140px;">حالة الطلب</th>
+                  <th style="width: 60px;">إجراء</th>
+                </tr>
+              </thead>
+              <tbody id="ordersTableBody">
+                <!-- يتم توليد الطلبات برمجياً عبر script.js -->
+              </tbody>
+            </table>
+          </div>
         </div>
       </section>
 

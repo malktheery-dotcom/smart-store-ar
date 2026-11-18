@@ -32,7 +32,10 @@ const STORAGE_KEYS = {
 
 const DEFAULT_SETTINGS = {
   storePhone: "966501234567",
-  currency: "ر.س"
+  currency: "ر.س",
+  codEnabled: true,
+  bankEnabled: true,
+  bankDetails: "البنك الأهلي السعودي: SA1234567890123456789012 (باسم: متجر بوسلطان)\nمصرف الراجحي: SA9876543210987654321098\nمحفظة STC Pay / كاش: 0501234567"
 };
 
 const DEFAULT_PIN = "1234";
@@ -108,8 +111,11 @@ let appliedCoupon = loadAppliedCoupon();
 
 // إعدادات المتجر الديناميكية
 const CONFIG = {
-  get STORE_PHONE() { return storeSettings.storePhone; },
-  get CURRENCY() { return storeSettings.currency; },
+  get STORE_PHONE() { return storeSettings.storePhone || DEFAULT_SETTINGS.storePhone; },
+  get CURRENCY() { return storeSettings.currency || DEFAULT_SETTINGS.currency; },
+  get COD_ENABLED() { return storeSettings.codEnabled !== false; },
+  get BANK_ENABLED() { return storeSettings.bankEnabled !== false; },
+  get BANK_DETAILS() { return storeSettings.bankDetails || DEFAULT_SETTINGS.bankDetails; },
   PRODUCTS_KEY: STORAGE_KEYS.PRODUCTS,
   CART_KEY: STORAGE_KEYS.CART,
   SETTINGS_KEY: STORAGE_KEYS.SETTINGS,
@@ -184,6 +190,7 @@ const DEFAULT_PRODUCTS = [
 // حالة التطبيق (State)
 let products = [];
 let cart = [];
+let orders = [];
 let activeCategory = "all";
 let searchQuery = "";
 
@@ -247,6 +254,9 @@ const DOM = {
   storeSettingsForm: document.getElementById("storeSettingsForm"),
   settingsStorePhone: document.getElementById("settingsStorePhone"),
   settingsCurrency: document.getElementById("settingsCurrency"),
+  settingsCodEnabled: document.getElementById("settingsCodEnabled"),
+  settingsBankEnabled: document.getElementById("settingsBankEnabled"),
+  settingsBankDetails: document.getElementById("settingsBankDetails"),
   changePinModal: document.getElementById("changePinModal"),
   btnOpenChangePin: document.getElementById("btnOpenChangePin"),
   closePinModalBtn: document.getElementById("closePinModalBtn"),
@@ -254,6 +264,24 @@ const DOM = {
   currentPinInput: document.getElementById("currentPinInput"),
   newPinInput: document.getElementById("newPinInput"),
   confirmPinInput: document.getElementById("confirmPinInput"),
+
+  // إدارة الطلبات في لوحة التحكم
+  statTotalOrders: document.getElementById("statTotalOrders"),
+  ordersSection: document.getElementById("ordersSection"),
+  ordersCountBadge: document.getElementById("ordersCountBadge"),
+  ordersTableBody: document.getElementById("ordersTableBody"),
+  btnRefreshOrders: document.getElementById("btnRefreshOrders"),
+
+  // خيارات الدفع في سلة الشراء ومودال الطلب
+  paymentSelectionGroup: document.getElementById("paymentSelectionGroup"),
+  payMethodCodCard: document.getElementById("payMethodCodCard"),
+  payMethodBankCard: document.getElementById("payMethodBankCard"),
+  payMethodCod: document.getElementById("payMethodCod"),
+  payMethodBank: document.getElementById("payMethodBank"),
+  bankDetailsCheckoutBox: document.getElementById("bankDetailsCheckoutBox"),
+  bankDetailsDisplay: document.getElementById("bankDetailsDisplay"),
+  btnCopyBankDetails: document.getElementById("btnCopyBankDetails"),
+  transferReference: document.getElementById("transferReference"),
 
   // كوبونات الخصم في المتجر
   couponCodeInput: document.getElementById("couponCodeInput"),
@@ -292,6 +320,7 @@ function initApp() {
   if (DOM.productsGrid) {
     setupEventListeners();
     setupCartCouponEvents();
+    setupCheckoutPaymentEvents();
     renderProducts();
     updateCartUI();
   }
@@ -305,6 +334,16 @@ function initApp() {
   }
   if (DOM.couponForm) {
     setupCouponAdmin();
+  }
+
+  // تفعيل إدارة الطلبات في لوحة التحكم
+  if (DOM.ordersTableBody) {
+    loadOrders();
+    if (DOM.btnRefreshOrders) {
+      DOM.btnRefreshOrders.addEventListener("click", () => {
+        loadOrders(true);
+      });
+    }
   }
 
   // تفعيل واجهة لوحة التحكم إن كانت الصفحة هي لوحة التحكم
@@ -771,6 +810,111 @@ function animateBadge() {
 // ==========================================================================
 // 5. إتمام الطلب وتوليد رسالة واتساب (Checkout & WhatsApp)
 // ==========================================================================
+function setupCheckoutPaymentEvents() {
+  const codRadio = DOM.payMethodCod;
+  const bankRadio = DOM.payMethodBank;
+  const codCard = DOM.payMethodCodCard;
+  const bankCard = DOM.payMethodBankCard;
+  const bankBox = DOM.bankDetailsCheckoutBox;
+
+  function handleMethodChange() {
+    if (bankRadio && bankRadio.checked) {
+      if (bankCard) bankCard.classList.add("active");
+      if (codCard) codCard.classList.remove("active");
+      if (bankBox) {
+        bankBox.style.display = "block";
+        if (DOM.bankDetailsDisplay) {
+          DOM.bankDetailsDisplay.textContent = CONFIG.BANK_DETAILS;
+        }
+      }
+    } else {
+      if (codCard) codCard.classList.add("active");
+      if (bankCard) bankCard.classList.remove("active");
+      if (bankBox) bankBox.style.display = "none";
+    }
+  }
+
+  if (codRadio) codRadio.addEventListener("change", handleMethodChange);
+  if (bankRadio) bankRadio.addEventListener("change", handleMethodChange);
+
+  if (DOM.btnCopyBankDetails) {
+    DOM.btnCopyBankDetails.addEventListener("click", () => {
+      const detailsText = CONFIG.BANK_DETAILS;
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(detailsText).then(() => {
+          showToast("تم نسخ بيانات الحساب البنكي بنجاح!", "success");
+        }).catch(() => {
+          fallbackCopyText(detailsText);
+        });
+      } else {
+        fallbackCopyText(detailsText);
+      }
+    });
+  }
+}
+
+function fallbackCopyText(text) {
+  const textArea = document.createElement("textarea");
+  textArea.value = text;
+  document.body.appendChild(textArea);
+  textArea.select();
+  try {
+    document.execCommand("copy");
+    showToast("تم نسخ بيانات الحساب البنكي بنجاح!", "success");
+  } catch (err) {
+    showToast("يرجى تحديد النص ونسخه يدوياً", "info");
+  }
+  document.body.removeChild(textArea);
+}
+
+function setupPaymentMethodsInCheckout() {
+  if (!DOM.paymentSelectionGroup) return;
+
+  const codEnabled = CONFIG.COD_ENABLED;
+  const bankEnabled = CONFIG.BANK_ENABLED;
+
+  // إذا تم تعطيل كليهما نفعّل الدفع عند الاستلام افتراضياً لضمان استمرار المتجر
+  const actualCod = codEnabled || (!codEnabled && !bankEnabled);
+  const actualBank = bankEnabled;
+
+  if (DOM.payMethodCodCard) {
+    DOM.payMethodCodCard.style.display = actualCod ? "flex" : "none";
+  }
+  if (DOM.payMethodBankCard) {
+    DOM.payMethodBankCard.style.display = actualBank ? "flex" : "none";
+  }
+
+  if (actualCod && !actualBank) {
+    if (DOM.payMethodCod) DOM.payMethodCod.checked = true;
+    if (DOM.payMethodCodCard) DOM.payMethodCodCard.classList.add("active");
+    if (DOM.payMethodBankCard) DOM.payMethodBankCard.classList.remove("active");
+    if (DOM.bankDetailsCheckoutBox) DOM.bankDetailsCheckoutBox.style.display = "none";
+  } else if (!actualCod && actualBank) {
+    if (DOM.payMethodBank) DOM.payMethodBank.checked = true;
+    if (DOM.payMethodBankCard) DOM.payMethodBankCard.classList.add("active");
+    if (DOM.payMethodCodCard) DOM.payMethodCodCard.classList.remove("active");
+    if (DOM.bankDetailsCheckoutBox) {
+      DOM.bankDetailsCheckoutBox.style.display = "block";
+      if (DOM.bankDetailsDisplay) DOM.bankDetailsDisplay.textContent = CONFIG.BANK_DETAILS;
+    }
+  } else {
+    // كلاهما مفعل
+    if (DOM.payMethodBank && DOM.payMethodBank.checked) {
+      if (DOM.payMethodBankCard) DOM.payMethodBankCard.classList.add("active");
+      if (DOM.payMethodCodCard) DOM.payMethodCodCard.classList.remove("active");
+      if (DOM.bankDetailsCheckoutBox) {
+        DOM.bankDetailsCheckoutBox.style.display = "block";
+        if (DOM.bankDetailsDisplay) DOM.bankDetailsDisplay.textContent = CONFIG.BANK_DETAILS;
+      }
+    } else {
+      if (DOM.payMethodCod) DOM.payMethodCod.checked = true;
+      if (DOM.payMethodCodCard) DOM.payMethodCodCard.classList.add("active");
+      if (DOM.payMethodBankCard) DOM.payMethodBankCard.classList.remove("active");
+      if (DOM.bankDetailsCheckoutBox) DOM.bankDetailsCheckoutBox.style.display = "none";
+    }
+  }
+}
+
 function openCheckoutModal() {
   if (!DOM.checkoutModal) return;
 
@@ -792,6 +936,9 @@ function openCheckoutModal() {
 
   if (DOM.modalTotalAmount) DOM.modalTotalAmount.textContent = `${finalTotal} ${CONFIG.CURRENCY}`;
 
+  // تحديث وتجهيز طرق الدفع المتاحة بناءً على إعدادات المتجر
+  setupPaymentMethodsInCheckout();
+
   DOM.checkoutModal.classList.add("active");
   document.body.style.overflow = "hidden";
 }
@@ -802,7 +949,7 @@ function closeCheckoutModal() {
   document.body.style.overflow = "";
 }
 
-function handleOrderSubmit(e) {
+async function handleOrderSubmit(e) {
   e.preventDefault();
 
   if (cart.length === 0) {
@@ -820,19 +967,82 @@ function handleOrderSubmit(e) {
     return;
   }
 
-  // إنشاء رقم طلب وتاريخ
-  const orderNumber = "SMT-" + Math.floor(100000 + Math.random() * 900000);
-  const now = new Date();
-  const orderDate = now.toLocaleDateString("ar-SA", { year: "numeric", month: "short", day: "numeric" });
+  // التحقق من طريقة الدفع
+  const selectedPaymentInput = document.querySelector('input[name="orderPaymentMethod"]:checked');
+  const paymentMethod = selectedPaymentInput ? selectedPaymentInput.value : "الدفع عند الاستلام";
+  const isBankTransfer = paymentMethod.includes("التحويل البنكي") || paymentMethod.includes("المحفظة");
+
+  let transferRef = "";
+  if (isBankTransfer) {
+    if (DOM.transferReference) {
+      transferRef = DOM.transferReference.value.trim();
+    }
+    if (!transferRef) {
+      showToast("يرجى إدخال رقم الحوالة أو اسم المحول لإتمام الطلب!", "danger");
+      if (DOM.transferReference) DOM.transferReference.focus();
+      return;
+    }
+  }
 
   const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
   const discountAmount = appliedCoupon ? Math.round((subtotal * appliedCoupon.discount) / 100) : 0;
   const finalTotal = Math.max(0, subtotal - discountAmount);
 
-  // صياغة رسالة واتساب منسقة وأنيقة
+  // إعداد بيانات الطلب لقاعدة بيانات Supabase
+  let orderId = "SMT-" + Math.floor(100000 + Math.random() * 900000);
+  const orderItemsData = cart.map(item => ({
+    id: item.id,
+    name: item.name,
+    price: item.price,
+    quantity: item.quantity,
+    category: item.category,
+    total: item.price * item.quantity
+  }));
+
+  const orderPayload = {
+    customer_name: name,
+    customer_phone: phone,
+    customer_address: address,
+    items: orderItemsData,
+    total_amount: finalTotal,
+    payment_method: paymentMethod,
+    transfer_reference: isBankTransfer ? transferRef : null,
+    status: "قيد المراجعة"
+  };
+
+  const submitBtn = e.target.querySelector('button[type="submit"]');
+  const originalBtnHtml = submitBtn ? submitBtn.innerHTML : "";
+  if (submitBtn) {
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = `<span>جاري حفظ الطلب وتحويلك للواتساب...</span>`;
+  }
+
+  // حفظ الطلب أولاً في جدول orders في Supabase
+  if (supabaseClient) {
+    try {
+      const { data, error } = await supabaseClient
+        .from("orders")
+        .insert([orderPayload])
+        .select()
+        .single();
+
+      if (!error && data) {
+        orderId = data.id;
+      } else if (error) {
+        console.error("خطأ حفظ الطلب في Supabase:", error);
+      }
+    } catch (err) {
+      console.warn("استثناء أثناء إدراج الطلب في Supabase:", err);
+    }
+  }
+
+  const now = new Date();
+  const orderDate = now.toLocaleDateString("ar-SA", { year: "numeric", month: "short", day: "numeric" });
+
+  // صياغة رسالة واتساب منسقة وشاملة
   let message = `🛒 *طلب جديد من متجر بوسلطان*\n`;
   message += `━━━━━━━━━━━━━━━━━━━━━\n`;
-  message += `🔖 *رقم الطلب:* #${orderNumber}\n`;
+  message += `🔖 *رقم الطلب:* #${orderId}\n`;
   message += `📅 *التاريخ:* ${orderDate}\n`;
   message += `━━━━━━━━━━━━━━━━━━━━━\n`;
   message += `👤 *بيانات العميل:*\n`;
@@ -862,6 +1072,11 @@ function handleOrderSubmit(e) {
   }
 
   message += `━━━━━━━━━━━━━━━━━━━━━\n`;
+  message += `💳 *طريقة الدفع:* ${paymentMethod}\n`;
+  if (isBankTransfer && transferRef) {
+    message += `📄 *رقم الحوالة / اسم المحول:* ${transferRef}\n`;
+  }
+  message += `━━━━━━━━━━━━━━━━━━━━━\n`;
   message += `✨ يرجى تأكيد الطلب للبدء بالتجهيز والشحن، شكراً لكم!`;
 
   // رابط الواتساب المشفر
@@ -869,6 +1084,12 @@ function handleOrderSubmit(e) {
 
   // فتح الواتساب في نافذة جديدة
   window.open(whatsappUrl, "_blank");
+
+  // إعادة زر الحفظ لحالته الأصلية
+  if (submitBtn) {
+    submitBtn.disabled = false;
+    submitBtn.innerHTML = originalBtnHtml;
+  }
 
   // تفريغ السلة وتفريغ الكوبون المطبق وتحديث الواجهة
   cart = [];
@@ -880,8 +1101,9 @@ function handleOrderSubmit(e) {
   // إغلاق المودال وتصفير النموذج
   closeCheckoutModal();
   DOM.checkoutForm.reset();
+  if (DOM.transferReference) DOM.transferReference.value = "";
 
-  showToast("تم تحويل طلبك إلى واتساب بنجاح! شكراً لطلبك.", "success");
+  showToast(`تم تسجيل طلبك #${orderId} وحفظه بنجاح! شكراً لتسوقك معنا.`, "success");
 }
 
 // ==========================================================================
@@ -1396,6 +1618,9 @@ function setupStoreSettings() {
       e.preventDefault();
       const phone = DOM.settingsStorePhone.value.trim().replace(/[^0-9]/g, "");
       const currency = DOM.settingsCurrency.value.trim();
+      const codEnabled = DOM.settingsCodEnabled ? DOM.settingsCodEnabled.checked : true;
+      const bankEnabled = DOM.settingsBankEnabled ? DOM.settingsBankEnabled.checked : true;
+      const bankDetails = DOM.settingsBankDetails ? DOM.settingsBankDetails.value.trim() : DEFAULT_SETTINGS.bankDetails;
 
       if (!phone) {
         showToast("يرجى إدخال رقم هاتف واتساب صالح (أرقام فقط)!", "danger");
@@ -1407,12 +1632,18 @@ function setupStoreSettings() {
         return;
       }
 
-      storeSettings = { storePhone: phone, currency: currency };
+      storeSettings = {
+        storePhone: phone,
+        currency: currency,
+        codEnabled: codEnabled,
+        bankEnabled: bankEnabled,
+        bankDetails: bankDetails
+      };
       saveStoreSettings(storeSettings);
 
       // تحديث الجدول والإحصائيات بالعملة الجديدة فوراً
       renderAdminProducts();
-      showToast("تم حفظ إعدادات المتجر وتحديث العملة ورقم الواتساب بنجاح!", "success");
+      showToast("تم حفظ إعدادات المتجر وطرق الدفع بنجاح!", "success");
 
       // المزامنة والحفظ في سحابة Supabase
       if (supabaseClient) {
@@ -1420,6 +1651,9 @@ function setupStoreSettings() {
           id: "general",
           store_phone: phone,
           currency: currency,
+          cod_enabled: codEnabled,
+          bank_enabled: bankEnabled,
+          bank_details: bankDetails,
           updated_at: new Date().toISOString()
         }).then(({ error }) => {
           if (error) console.error("خطأ حفظ إعدادات Supabase:", error);
@@ -1480,6 +1714,9 @@ function setupStoreSettings() {
 function populateStoreSettingsForm() {
   if (DOM.settingsStorePhone) DOM.settingsStorePhone.value = storeSettings.storePhone;
   if (DOM.settingsCurrency) DOM.settingsCurrency.value = storeSettings.currency;
+  if (DOM.settingsCodEnabled) DOM.settingsCodEnabled.checked = storeSettings.codEnabled !== false;
+  if (DOM.settingsBankEnabled) DOM.settingsBankEnabled.checked = storeSettings.bankEnabled !== false;
+  if (DOM.settingsBankDetails) DOM.settingsBankDetails.value = storeSettings.bankDetails || DEFAULT_SETTINGS.bankDetails;
 }
 
 function openChangePinModal() {
@@ -1689,13 +1926,17 @@ async function syncSettingsFromSupabase() {
       if (!error && data) {
         storeSettings = {
           storePhone: data.store_phone || DEFAULT_SETTINGS.storePhone,
-          currency: data.currency || DEFAULT_SETTINGS.currency
+          currency: data.currency || DEFAULT_SETTINGS.currency,
+          codEnabled: data.cod_enabled !== false,
+          bankEnabled: data.bank_enabled !== false,
+          bankDetails: data.bank_details || DEFAULT_SETTINGS.bankDetails
         };
         saveStoreSettings(storeSettings);
         if (DOM.storeSettingsForm) populateStoreSettingsForm();
         if (DOM.productsGrid) {
           renderProducts();
           updateCartUI();
+          setupPaymentMethodsInCheckout();
         }
         if (DOM.adminProductsTableBody) renderAdminProducts();
       }
@@ -1742,9 +1983,217 @@ function setupSupabaseRealtime() {
       .on("postgres_changes", { event: "*", schema: "public", table: "coupons" }, () => {
         syncCouponsFromSupabase();
       })
+      .on("postgres_changes", { event: "*", schema: "public", table: "orders" }, () => {
+        loadOrders();
+      })
       .subscribe();
   } catch (err) {
     console.warn("تعذر تفعيل Supabase Realtime:", err);
+  }
+}
+
+// ==========================================================================
+// 12. إدارة الطلبات في لوحة التحكم (Admin Orders Management)
+// ==========================================================================
+
+function escapeHtml(str) {
+  if (!str) return "";
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+async function loadOrders(showSuccessToast = false) {
+  if (!supabaseClient) return;
+
+  try {
+    const { data, error } = await supabaseClient
+      .from("orders")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    if (!error && data) {
+      orders = data;
+      renderAdminOrders();
+      updateOrdersStats();
+      if (showSuccessToast) {
+        showToast("تم تحديث قائمة الطلبات من السحابة بنجاح!", "info");
+      }
+    } else if (error) {
+      console.error("خطأ جلب الطلبات من Supabase:", error);
+    }
+  } catch (err) {
+    console.error("استثناء أثناء جلب الطلبات:", err);
+  }
+}
+
+function updateOrdersStats() {
+  if (DOM.statTotalOrders) {
+    DOM.statTotalOrders.textContent = orders.length;
+  }
+  if (DOM.ordersCountBadge) {
+    DOM.ordersCountBadge.textContent = `${orders.length} طلب`;
+  }
+}
+
+function renderAdminOrders() {
+  if (!DOM.ordersTableBody) return;
+
+  if (orders.length === 0) {
+    DOM.ordersTableBody.innerHTML = `
+      <tr>
+        <td colspan="8" style="text-align: center; padding: 2.5rem; color: var(--text-muted);">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin: 0 auto 0.75rem; display: block; opacity: 0.4;">
+            <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path>
+            <line x1="3" y1="6" x2="21" y2="6"></line>
+            <path d="M16 10a4 4 0 0 1-8 0"></path>
+          </svg>
+          <strong>لا توجد أي طلبات واردة حالياً</strong>
+          <p style="font-size: 0.85rem; margin-top: 0.35rem;">عندما يقوم العملاء بطلب منتجات من المتجر ستظهر طلباتهم هنا تلقائياً وتُحفظ في Supabase.</p>
+        </td>
+      </tr>
+    `;
+    return;
+  }
+
+  DOM.ordersTableBody.innerHTML = orders.map(order => {
+    // تنسيق التاريخ والوقت
+    const createdAt = order.created_at ? new Date(order.created_at) : new Date();
+    const dateFormatted = createdAt.toLocaleDateString("ar-SA", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit"
+    });
+
+    // عناصر الطلب
+    let itemsHtml = "";
+    if (Array.isArray(order.items) && order.items.length > 0) {
+      itemsHtml = `
+        <div class="order-items-list">
+          ${order.items.map(item => `
+            <div class="order-item-row">
+              <span>• <strong>${escapeHtml(item.name || "")}</strong></span>
+              <span style="color: var(--text-muted); font-size: 0.8rem;">(${item.quantity || 1} × ${item.price || 0} ${CONFIG.CURRENCY})</span>
+            </div>
+          `).join("")}
+        </div>
+      `;
+    } else {
+      itemsHtml = `<span style="color: var(--text-muted);">—</span>`;
+    }
+
+    // طريقة الدفع
+    const isBank = (order.payment_method || "").includes("التحويل البنكي") || (order.payment_method || "").includes("المحفظة");
+    const paymentBadge = isBank
+      ? `<span class="coupon-code-badge" style="font-size: 0.78rem; background-color: #eff6ff; color: #2563eb;">🏦 تحويل بنكي / محفظة</span>`
+      : `<span class="coupon-code-badge" style="font-size: 0.78rem; background-color: #f0fdf4; color: #16a34a;">💵 دفع عند الاستلام</span>`;
+
+    // رقم الحوالة
+    const transferRefHtml = order.transfer_reference
+      ? `<span style="font-weight: 800; color: #1e293b; background-color: #f1f5f9; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.82rem; word-break: break-all;">${escapeHtml(order.transfer_reference)}</span>`
+      : `<span style="color: var(--text-light); font-size: 0.85rem;">—</span>`;
+
+    // تحديد كلاس الحالة
+    let statusClass = "status-pending";
+    if (order.status === "تم التأكيد") statusClass = "status-confirmed";
+    if (order.status === "تم التوصيل") statusClass = "status-delivered";
+
+    return `
+      <tr>
+        <td>
+          <strong style="color: var(--primary); font-family: monospace; font-size: 0.95rem;">#${order.id}</strong>
+        </td>
+        <td>
+          <div style="font-weight: 800; color: var(--dark);">${escapeHtml(order.customer_name || "")}</div>
+          <div style="font-size: 0.82rem; margin-top: 0.2rem;" dir="ltr">
+            <a href="tel:${escapeHtml(order.customer_phone || "")}" style="color: var(--primary); text-decoration: none;">📞 ${escapeHtml(order.customer_phone || "")}</a>
+          </div>
+          <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.2rem; max-width: 220px;">📍 ${escapeHtml(order.customer_address || "")}</div>
+        </td>
+        <td>
+          ${itemsHtml}
+        </td>
+        <td>
+          <div style="font-size: 1.05rem; font-weight: 900; color: var(--dark); margin-bottom: 0.3rem;">
+            ${order.total_amount || 0} ${CONFIG.CURRENCY}
+          </div>
+          ${paymentBadge}
+        </td>
+        <td>
+          ${transferRefHtml}
+        </td>
+        <td style="font-size: 0.82rem; color: var(--text-muted); white-space: nowrap;">
+          ${dateFormatted}
+        </td>
+        <td>
+          <select class="select-order-status" onchange="updateOrderStatus('${order.id}', this.value)" style="width: 100%;">
+            <option value="قيد المراجعة" ${order.status === "قيد المراجعة" ? "selected" : ""}>⏳ قيد المراجعة</option>
+            <option value="تم التأكيد" ${order.status === "تم التأكيد" ? "selected" : ""}>✅ تم التأكيد</option>
+            <option value="تم التوصيل" ${order.status === "تم التوصيل" ? "selected" : ""}>🚚 تم التوصيل</option>
+          </select>
+        </td>
+        <td>
+          <button type="button" class="btn-action-delete" onclick="deleteOrder('${order.id}')" title="حذف هذا الطلب">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="3 6 5 6 21 6"></polyline>
+              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+            </svg>
+          </button>
+        </td>
+      </tr>
+    `;
+  }).join("");
+}
+
+async function updateOrderStatus(orderId, newStatus) {
+  if (!supabaseClient) return;
+
+  try {
+    const { error } = await supabaseClient
+      .from("orders")
+      .update({ status: newStatus })
+      .eq("id", orderId);
+
+    if (error) {
+      showToast("فشل تحديث حالة الطلب!", "danger");
+      console.error(error);
+    } else {
+      showToast(`تم تغيير حالة الطلب #${orderId} إلى (${newStatus}) بنجاح!`, "success");
+      const found = orders.find(o => String(o.id) === String(orderId));
+      if (found) found.status = newStatus;
+      renderAdminOrders();
+    }
+  } catch (err) {
+    showToast("خطأ أثناء الاتصال لتحديث حالة الطلب", "danger");
+  }
+}
+
+async function deleteOrder(orderId) {
+  if (!confirm(`هل أنت متأكد من حذف الطلب رقم #${orderId} نهائياً؟`)) return;
+  if (!supabaseClient) return;
+
+  try {
+    const { error } = await supabaseClient
+      .from("orders")
+      .delete()
+      .eq("id", orderId);
+
+    if (error) {
+      showToast("تعذر حذف الطلب!", "danger");
+      console.error(error);
+    } else {
+      showToast(`تم حذف الطلب #${orderId} بنجاح!`, "success");
+      orders = orders.filter(o => String(o.id) !== String(orderId));
+      renderAdminOrders();
+      updateOrdersStats();
+    }
+  } catch (err) {
+    showToast("خطأ أثناء حذف الطلب", "danger");
   }
 }
 
@@ -1752,3 +2201,5 @@ function setupSupabaseRealtime() {
 window.applyCoupon = applyCoupon;
 window.removeAppliedCoupon = removeAppliedCoupon;
 window.deleteCoupon = deleteCoupon;
+window.updateOrderStatus = updateOrderStatus;
+window.deleteOrder = deleteOrder;

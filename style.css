@@ -1344,6 +1344,11 @@ textarea.form-control {
   color: var(--warning);
 }
 
+.stat-icon.purple {
+  background-color: #f3e8ff;
+  color: #7c3aed;
+}
+
 .stat-details {
   display: flex;
   flex-direction: column;
@@ -1910,4 +1915,262 @@ textarea.form-control {
   font-family: monospace, sans-serif;
   letter-spacing: 0.5px;
   font-size: 0.95rem;
+}
+
+
+/* ==========================================================================
+   خيارات الدفع وبيانات التحويل البنكي (Payment Methods Styling)
+   ========================================================================== */
+
+.payment-methods-container {
+  margin-bottom: 1.25rem;
+}
+
+.payment-methods-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
+
+@media (max-width: 480px) {
+  .payment-methods-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.payment-method-card {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.85rem 1rem;
+  background-color: var(--bg-body);
+  border: 2px solid var(--border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  user-select: none;
+}
+
+.payment-method-card:hover {
+  border-color: #cbd5e1;
+  background-color: #f1f5f9;
+}
+
+.payment-method-card.active {
+  border-color: var(--primary);
+  background-color: var(--primary-light);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+
+.payment-method-radio {
+  accent-color: var(--primary);
+  width: 18px;
+  height: 18px;
+}
+
+.payment-method-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.payment-method-title {
+  font-size: 0.92rem;
+  font-weight: 800;
+  color: var(--dark);
+}
+
+.payment-method-desc {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+/* صندوق تفاصيل الحسابات البنكية */
+.bank-info-box {
+  background: linear-gradient(135deg, #f8fafc, #f1f5f9);
+  border: 1.5px dashed #93c5fd;
+  border-radius: var(--radius-md);
+  padding: 1.1rem;
+  margin-top: 0.85rem;
+  margin-bottom: 1rem;
+  animation: lockSlideUp 0.3s ease;
+}
+
+.bank-info-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.65rem;
+  font-size: 0.88rem;
+  font-weight: 800;
+  color: var(--primary);
+}
+
+.bank-info-details {
+  background-color: #fff;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0.75rem 1rem;
+  font-size: 0.88rem;
+  color: var(--dark);
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-word;
+  user-select: all;
+  font-family: inherit;
+}
+
+.btn-copy-bank {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.75rem;
+  background-color: #fff;
+  border: 1px solid #bfdbfe;
+  color: var(--primary);
+  border-radius: var(--radius-full);
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.btn-copy-bank:hover {
+  background-color: var(--primary);
+  color: #fff;
+}
+
+/* مفاتيح التبديل (Toggles) في الإعدادات */
+.toggle-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.85rem 1rem;
+  background-color: var(--bg-body);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+
+.toggle-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.toggle-title {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: var(--dark);
+}
+
+.toggle-subtitle {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 48px;
+  height: 26px;
+  flex-shrink: 0;
+}
+
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #cbd5e1;
+  transition: .3s;
+  border-radius: 34px;
+}
+
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 20px;
+  width: 20px;
+  left: 3px;
+  bottom: 3px;
+  background-color: white;
+  transition: .3s;
+  border-radius: 50%;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+input:checked + .slider {
+  background-color: var(--accent);
+}
+
+input:checked + .slider:before {
+  transform: translateX(22px);
+}
+
+/* جدول إدارة الطلبات (Orders Management) */
+.order-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.3rem 0.75rem;
+  border-radius: var(--radius-full);
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.status-pending {
+  background-color: #fef3c7;
+  color: #b45309;
+  border: 1px solid #fde68a;
+}
+
+.status-confirmed {
+  background-color: #dbeafe;
+  color: #1d4ed8;
+  border: 1px solid #bfdbfe;
+}
+
+.status-delivered {
+  background-color: #d1fae5;
+  color: #047857;
+  border: 1px solid #a7f3d0;
+}
+
+.select-order-status {
+  padding: 0.4rem 0.65rem;
+  border-radius: var(--radius-sm);
+  border: 1.5px solid var(--border);
+  font-size: 0.85rem;
+  font-weight: 700;
+  background-color: #fff;
+  color: var(--dark);
+  cursor: pointer;
+  transition: border-color var(--transition-fast);
+}
+
+.select-order-status:focus {
+  border-color: var(--primary);
+}
+
+.order-items-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-size: 0.85rem;
+  max-width: 280px;
+}
+
+.order-item-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  color: var(--text-main);
 }
