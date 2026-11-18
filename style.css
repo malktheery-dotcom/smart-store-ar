@@ -1796,3 +1796,118 @@ textarea.form-control {
   background-color: var(--danger);
   color: #fff;
 }
+
+
+/* ==========================================================================
+   نظام كوبونات الخصم (Coupons Styling)
+   ========================================================================== */
+
+.cart-coupon-wrapper {
+  margin-bottom: 0.85rem;
+  padding-bottom: 0.85rem;
+  border-bottom: 1px dashed var(--border);
+}
+
+.coupon-input-group {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.coupon-input {
+  flex: 1;
+  padding: 0.55rem 0.85rem;
+  font-size: 0.88rem;
+  font-weight: 700;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  background-color: var(--bg-body);
+  text-transform: uppercase;
+  color: var(--dark);
+  transition: all var(--transition-fast);
+}
+
+.coupon-input:focus {
+  background-color: #fff;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+
+.btn-apply-coupon {
+  padding: 0.55rem 1.1rem;
+  background-color: var(--dark);
+  color: #fff;
+  font-weight: 800;
+  font-size: 0.88rem;
+  border-radius: var(--radius-sm);
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+}
+
+.btn-apply-coupon:hover {
+  background-color: var(--primary);
+}
+
+.applied-coupon-tag {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background-color: #ecfdf5;
+  border: 1.5px solid #a7f3d0;
+  padding: 0.55rem 0.85rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.88rem;
+  color: #065f46;
+  animation: badgePop 0.25s ease;
+}
+
+.coupon-tag-info {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.coupon-tag-info svg {
+  color: var(--accent);
+  flex-shrink: 0;
+}
+
+.btn-remove-coupon {
+  background: none;
+  border: none;
+  color: #047857;
+  font-size: 1.1rem;
+  font-weight: 800;
+  cursor: pointer;
+  padding: 0 0.3rem;
+  line-height: 1;
+  border-radius: 4px;
+  transition: all var(--transition-fast);
+}
+
+.btn-remove-coupon:hover {
+  color: var(--danger);
+  background-color: rgba(239, 68, 68, 0.1);
+}
+
+.discount-row {
+  color: var(--accent) !important;
+  font-weight: 700;
+}
+
+.discount-amount {
+  font-weight: 800;
+  color: var(--accent);
+}
+
+.coupon-code-badge {
+  display: inline-block;
+  background-color: #eff6ff;
+  border: 1px solid #bfdbfe;
+  color: var(--primary);
+  font-weight: 800;
+  padding: 0.25rem 0.65rem;
+  border-radius: 6px;
+  font-family: monospace, sans-serif;
+  letter-spacing: 0.5px;
+  font-size: 0.95rem;
+}

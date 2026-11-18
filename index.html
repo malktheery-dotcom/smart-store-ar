@@ -201,9 +201,31 @@
 
     <!-- فوتر السلة والحسابات -->
     <div class="drawer-footer">
+      <!-- قسم إدخال كوبون الخصم -->
+      <div class="cart-coupon-wrapper">
+        <div class="coupon-input-group" id="couponInputGroup">
+          <input type="text" id="couponCodeInput" class="coupon-input" placeholder="أدخل كود الخصم (مثال: SULTAN10)">
+          <button type="button" id="btnApplyCoupon" class="btn-apply-coupon">تطبيق</button>
+        </div>
+        <div id="appliedCouponTag" class="applied-coupon-tag" style="display: none;">
+          <div class="coupon-tag-info">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path>
+              <line x1="7" y1="7" x2="7.01" y2="7"></line>
+            </svg>
+            <span id="appliedCouponText">كوبون فعال: <strong>SULTAN10</strong> (خصم 10%)</span>
+          </div>
+          <button type="button" id="btnRemoveCoupon" class="btn-remove-coupon" title="إلغاء الكوبون">✕</button>
+        </div>
+      </div>
+
       <div class="cart-summary-row">
         <span>المجموع الفرعي:</span>
         <span id="cartSubtotal">0 ر.س</span>
+      </div>
+      <div id="cartDiscountRow" class="cart-summary-row discount-row" style="display: none;">
+        <span>الخصم المطبق:</span>
+        <span id="cartDiscountAmount" class="discount-amount">-0 ر.س</span>
       </div>
       <div class="cart-summary-row">
         <span>الشحن والتوصيل:</span>
@@ -253,6 +275,10 @@
           <div>
             <span>عدد العناصر:</span>
             <span id="modalItemsCount">0</span>
+          </div>
+          <div id="modalDiscountRow" style="display: none;">
+            <span>الخصم:</span>
+            <span id="modalDiscountAmount" style="color: var(--accent); font-weight: 800;">-0 ر.س</span>
           </div>
           <div>
             <span>المبلغ المستحق:</span>

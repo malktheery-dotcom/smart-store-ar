@@ -10,7 +10,9 @@ const STORAGE_KEYS = {
   PRODUCTS: "smartstore_products",
   CART: "smartstore_cart",
   SETTINGS: "smartstore_settings",
-  PIN: "smartstore_admin_pin"
+  PIN: "smartstore_admin_pin",
+  COUPONS: "smartstore_coupons",
+  APPLIED_COUPON: "smartstore_applied_coupon"
 };
 
 const DEFAULT_SETTINGS = {
@@ -19,6 +21,48 @@ const DEFAULT_SETTINGS = {
 };
 
 const DEFAULT_PIN = "1234";
+
+// كوبونات الخصم النموذجية الأولية
+const DEFAULT_COUPONS = [
+  { code: "SULTAN10", discount: 10 },
+  { code: "RAMADAN15", discount: 15 }
+];
+
+function loadCoupons() {
+  const stored = localStorage.getItem(STORAGE_KEYS.COUPONS);
+  if (stored) {
+    try {
+      const parsed = JSON.parse(stored);
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    } catch (e) {}
+  }
+  localStorage.setItem(STORAGE_KEYS.COUPONS, JSON.stringify(DEFAULT_COUPONS));
+  return [...DEFAULT_COUPONS];
+}
+
+function saveCoupons(couponsList) {
+  localStorage.setItem(STORAGE_KEYS.COUPONS, JSON.stringify(couponsList));
+}
+
+function loadAppliedCoupon() {
+  const stored = localStorage.getItem(STORAGE_KEYS.APPLIED_COUPON);
+  if (stored) {
+    try {
+      return JSON.parse(stored);
+    } catch (e) {
+      return null;
+    }
+  }
+  return null;
+}
+
+function saveAppliedCoupon(coupon) {
+  if (coupon) {
+    localStorage.setItem(STORAGE_KEYS.APPLIED_COUPON, JSON.stringify(coupon));
+  } else {
+    localStorage.removeItem(STORAGE_KEYS.APPLIED_COUPON);
+  }
+}
 
 function loadStoreSettings() {
   const stored = localStorage.getItem(STORAGE_KEYS.SETTINGS);
@@ -45,6 +89,7 @@ function setAdminPin(newPin) {
 }
 
 let storeSettings = loadStoreSettings();
+let appliedCoupon = loadAppliedCoupon();
 
 // إعدادات المتجر الديناميكية
 const CONFIG = {
@@ -53,7 +98,8 @@ const CONFIG = {
   PRODUCTS_KEY: STORAGE_KEYS.PRODUCTS,
   CART_KEY: STORAGE_KEYS.CART,
   SETTINGS_KEY: STORAGE_KEYS.SETTINGS,
-  PIN_KEY: STORAGE_KEYS.PIN
+  PIN_KEY: STORAGE_KEYS.PIN,
+  COUPONS_KEY: STORAGE_KEYS.COUPONS
 };
 
 // المنتجات الافتراضية الأولية (6 منتجات نموذجية عالية الجودة)
@@ -192,7 +238,25 @@ const DOM = {
   changePinForm: document.getElementById("changePinForm"),
   currentPinInput: document.getElementById("currentPinInput"),
   newPinInput: document.getElementById("newPinInput"),
-  confirmPinInput: document.getElementById("confirmPinInput")
+  confirmPinInput: document.getElementById("confirmPinInput"),
+
+  // كوبونات الخصم في المتجر
+  couponCodeInput: document.getElementById("couponCodeInput"),
+  btnApplyCoupon: document.getElementById("btnApplyCoupon"),
+  couponInputGroup: document.getElementById("couponInputGroup"),
+  appliedCouponTag: document.getElementById("appliedCouponTag"),
+  appliedCouponText: document.getElementById("appliedCouponText"),
+  btnRemoveCoupon: document.getElementById("btnRemoveCoupon"),
+  cartDiscountRow: document.getElementById("cartDiscountRow"),
+  cartDiscountAmount: document.getElementById("cartDiscountAmount"),
+  modalDiscountRow: document.getElementById("modalDiscountRow"),
+  modalDiscountAmount: document.getElementById("modalDiscountAmount"),
+
+  // كوبونات الخصم في لوحة التحكم
+  couponForm: document.getElementById("couponForm"),
+  couponCodeInputAdmin: document.getElementById("couponCodeInputAdmin"),
+  couponDiscountInputAdmin: document.getElementById("couponDiscountInputAdmin"),
+  couponsTableBody: document.getElementById("couponsTableBody")
 };
 
 // ==========================================================================
@@ -209,6 +273,7 @@ function initApp() {
   // تفعيل واجهة المتجر إن كانت الصفحة هي المتجر
   if (DOM.productsGrid) {
     setupEventListeners();
+    setupCartCouponEvents();
     renderProducts();
     updateCartUI();
   }
@@ -219,6 +284,9 @@ function initApp() {
   }
   if (DOM.storeSettingsForm) {
     setupStoreSettings();
+  }
+  if (DOM.couponForm) {
+    setupCouponAdmin();
   }
 
   // تفعيل واجهة لوحة التحكم إن كانت الصفحة هي لوحة التحكم
@@ -246,6 +314,10 @@ function initApp() {
       if (DOM.adminProductForm) {
         renderAdminProducts();
       }
+    }
+    if (e.key === CONFIG.COUPONS_KEY) {
+      if (DOM.couponsTableBody) renderAdminCoupons();
+      if (DOM.productsGrid) updateCartUI();
     }
   });
 }
@@ -526,7 +598,23 @@ window.removeFromCart = function(productId, showNotification = true) {
  */
 function updateCartUI() {
   const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
-  const totalPrice = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+  const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+
+  // حساب الخصم إذا كان هناك كوبون مطبق
+  let discountAmount = 0;
+  if (appliedCoupon && subtotal > 0) {
+    const coupons = loadCoupons();
+    const valid = coupons.find(c => c.code.toUpperCase() === appliedCoupon.code.toUpperCase());
+    if (valid) {
+      appliedCoupon.discount = valid.discount;
+      discountAmount = Math.round((subtotal * appliedCoupon.discount) / 100);
+    } else {
+      appliedCoupon = null;
+      saveAppliedCoupon(null);
+    }
+  }
+
+  const finalTotal = Math.max(0, subtotal - discountAmount);
 
   // تحديث الشارة
   if (DOM.cartBadge) {
@@ -540,8 +628,33 @@ function updateCartUI() {
   }
 
   // تحديث الأسعار
-  if (DOM.cartSubtotal) DOM.cartSubtotal.textContent = `${totalPrice} ${CONFIG.CURRENCY}`;
-  if (DOM.cartTotal) DOM.cartTotal.textContent = `${totalPrice} ${CONFIG.CURRENCY}`;
+  if (DOM.cartSubtotal) DOM.cartSubtotal.textContent = `${subtotal} ${CONFIG.CURRENCY}`;
+  if (DOM.cartTotal) DOM.cartTotal.textContent = `${finalTotal} ${CONFIG.CURRENCY}`;
+
+  // تحديث سطر الخصم في السلة
+  if (DOM.cartDiscountRow && DOM.cartDiscountAmount) {
+    if (appliedCoupon && discountAmount > 0) {
+      DOM.cartDiscountRow.style.display = "flex";
+      DOM.cartDiscountAmount.textContent = `-${discountAmount} ${CONFIG.CURRENCY} (${appliedCoupon.discount}%)`;
+    } else {
+      DOM.cartDiscountRow.style.display = "none";
+    }
+  }
+
+  // تحديث واجهة إدخال الكوبون
+  if (DOM.couponInputGroup && DOM.appliedCouponTag) {
+    if (appliedCoupon && subtotal > 0) {
+      DOM.couponInputGroup.style.display = "none";
+      DOM.appliedCouponTag.style.display = "flex";
+      if (DOM.appliedCouponText) {
+        DOM.appliedCouponText.innerHTML = `كوبون فعال: <strong>${appliedCoupon.code}</strong> (خصم ${appliedCoupon.discount}%)`;
+      }
+    } else {
+      DOM.couponInputGroup.style.display = "flex";
+      DOM.appliedCouponTag.style.display = "none";
+      if (DOM.couponCodeInput) DOM.couponCodeInput.value = "";
+    }
+  }
 
   // تحديث عناصر السلة
   if (!DOM.cartItemsContainer) return;
@@ -615,10 +728,22 @@ function openCheckoutModal() {
   if (!DOM.checkoutModal) return;
 
   const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
-  const totalPrice = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+  const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+  const discountAmount = appliedCoupon ? Math.round((subtotal * appliedCoupon.discount) / 100) : 0;
+  const finalTotal = Math.max(0, subtotal - discountAmount);
 
   if (DOM.modalItemsCount) DOM.modalItemsCount.textContent = `${totalItems} منتجات`;
-  if (DOM.modalTotalAmount) DOM.modalTotalAmount.textContent = `${totalPrice} ${CONFIG.CURRENCY}`;
+  
+  if (DOM.modalDiscountRow && DOM.modalDiscountAmount) {
+    if (appliedCoupon && discountAmount > 0) {
+      DOM.modalDiscountRow.style.display = "flex";
+      DOM.modalDiscountAmount.textContent = `-${discountAmount} ${CONFIG.CURRENCY} (${appliedCoupon.code})`;
+    } else {
+      DOM.modalDiscountRow.style.display = "none";
+    }
+  }
+
+  if (DOM.modalTotalAmount) DOM.modalTotalAmount.textContent = `${finalTotal} ${CONFIG.CURRENCY}`;
 
   DOM.checkoutModal.classList.add("active");
   document.body.style.overflow = "hidden";
@@ -653,7 +778,9 @@ function handleOrderSubmit(e) {
   const now = new Date();
   const orderDate = now.toLocaleDateString("ar-SA", { year: "numeric", month: "short", day: "numeric" });
 
-  const totalPrice = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+  const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+  const discountAmount = appliedCoupon ? Math.round((subtotal * appliedCoupon.discount) / 100) : 0;
+  const finalTotal = Math.max(0, subtotal - discountAmount);
 
   // صياغة رسالة واتساب منسقة وأنيقة
   let message = `🛒 *طلب جديد من متجر بوسلطان*\n`;
@@ -676,8 +803,17 @@ function handleOrderSubmit(e) {
     message += `${index + 1}. *${item.name}*\n   الكمية: ${item.quantity} × ${item.price} = *${itemTotal} ${CONFIG.CURRENCY}*\n`;
   });
 
-  message += `━━━━━━━━━━━━━━━━━━━━━\n`;
-  message += `💰 *المجموع النهائي:* *${totalPrice} ${CONFIG.CURRENCY}*\n`;
+  if (appliedCoupon && discountAmount > 0) {
+    message += `━━━━━━━━━━━━━━━━━━━━━\n`;
+    message += `🎟️ *كوبون الخصم:* ${appliedCoupon.code} (خصم ${appliedCoupon.discount}%)\n`;
+    message += `💸 *قيمة الخصم:* -${discountAmount} ${CONFIG.CURRENCY}\n`;
+    message += `💵 *المجموع قبل الخصم:* ${subtotal} ${CONFIG.CURRENCY}\n`;
+    message += `💰 *المجموع النهائي بعد الخصم:* *${finalTotal} ${CONFIG.CURRENCY}*\n`;
+  } else {
+    message += `━━━━━━━━━━━━━━━━━━━━━\n`;
+    message += `💰 *المجموع النهائي:* *${finalTotal} ${CONFIG.CURRENCY}*\n`;
+  }
+
   message += `━━━━━━━━━━━━━━━━━━━━━\n`;
   message += `✨ يرجى تأكيد الطلب للبدء بالتجهيز والشحن، شكراً لكم!`;
 
@@ -687,9 +823,11 @@ function handleOrderSubmit(e) {
   // فتح الواتساب في نافذة جديدة
   window.open(whatsappUrl, "_blank");
 
-  // تفريغ السلة وتحديث الواجهة
+  // تفريغ السلة وتفريغ الكوبون المطبق وتحديث الواجهة
   cart = [];
+  appliedCoupon = null;
   saveCart();
+  saveAppliedCoupon(null);
   updateCartUI();
 
   // إغلاق المودال وتصفير النموذج
@@ -1237,3 +1375,169 @@ function closeChangePinModal() {
 window.lockDashboard = lockDashboard;
 window.openChangePinModal = openChangePinModal;
 window.closeChangePinModal = closeChangePinModal;
+
+
+// ==========================================================================
+// 10. نظام كوبونات الخصم (Coupons Management & Application)
+// ==========================================================================
+
+/**
+ * إعداد أحداث كوبونات الخصم في سلة المشتريات
+ */
+function setupCartCouponEvents() {
+  if (DOM.btnApplyCoupon && DOM.couponCodeInput) {
+    DOM.btnApplyCoupon.addEventListener("click", () => {
+      applyCoupon(DOM.couponCodeInput.value);
+    });
+
+    DOM.couponCodeInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        applyCoupon(DOM.couponCodeInput.value);
+      }
+    });
+  }
+
+  if (DOM.btnRemoveCoupon) {
+    DOM.btnRemoveCoupon.addEventListener("click", removeAppliedCoupon);
+  }
+}
+
+/**
+ * تطبيق كود الخصم في السلة
+ */
+function applyCoupon(rawCode) {
+  const code = (rawCode || "").trim().toUpperCase();
+  if (!code) {
+    showToast("يرجى كتابة كود الخصم أولاً!", "danger");
+    if (DOM.couponCodeInput) DOM.couponCodeInput.focus();
+    return;
+  }
+
+  const coupons = loadCoupons();
+  const found = coupons.find(c => c.code.toUpperCase() === code);
+
+  if (found) {
+    appliedCoupon = { code: found.code, discount: found.discount };
+    saveAppliedCoupon(appliedCoupon);
+    updateCartUI();
+    showToast(`تم تطبيق كود الخصم (${found.code}) بنجاح! خصم ${found.discount}%`, "success");
+  } else {
+    showToast(`كود الخصم (${code}) غير صحيح أو غير موجود!`, "danger");
+    if (DOM.couponCodeInput) {
+      DOM.couponCodeInput.value = "";
+      DOM.couponCodeInput.focus();
+    }
+  }
+}
+
+/**
+ * إلغاء كود الخصم المطبق في السلة
+ */
+function removeAppliedCoupon() {
+  appliedCoupon = null;
+  saveAppliedCoupon(null);
+  updateCartUI();
+  showToast("تمت إزالة كوبون الخصم من السلة.", "info");
+}
+
+/**
+ * إعداد لوحة تحكم الكوبونات في الإدارة
+ */
+function setupCouponAdmin() {
+  renderAdminCoupons();
+
+  if (DOM.couponForm) {
+    DOM.couponForm.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const code = (DOM.couponCodeInputAdmin.value || "").trim().toUpperCase();
+      const discount = parseInt(DOM.couponDiscountInputAdmin.value, 10);
+
+      if (!code || isNaN(discount) || discount < 1 || discount > 100) {
+        showToast("يرجى إدخال كود صالح ونسبة خصم بين 1% و 100%!", "danger");
+        return;
+      }
+
+      let coupons = loadCoupons();
+      const existing = coupons.find(c => c.code.toUpperCase() === code);
+      if (existing) {
+        showToast(`الكوبون (${code}) موجود مسبقاً!`, "danger");
+        DOM.couponCodeInputAdmin.focus();
+        return;
+      }
+
+      coupons.unshift({ code, discount });
+      saveCoupons(coupons);
+      DOM.couponForm.reset();
+      renderAdminCoupons();
+      showToast(`تم إنشاء وتفعيل الكوبون (${code}) بنسبة خصم ${discount}% بنجاح!`, "success");
+    });
+  }
+}
+
+/**
+ * عرض جدول الكوبونات في لوحة الإدارة
+ */
+function renderAdminCoupons() {
+  if (!DOM.couponsTableBody) return;
+
+  const coupons = loadCoupons();
+
+  if (coupons.length === 0) {
+    DOM.couponsTableBody.innerHTML = `
+      <tr>
+        <td colspan="4" style="text-align: center; padding: 2rem; color: var(--text-muted);">
+          لا توجد كوبونات خصم حالياً. أضف كوبوناً جديداً من النموذج أعلاه.
+        </td>
+      </tr>
+    `;
+    return;
+  }
+
+  DOM.couponsTableBody.innerHTML = coupons.map(c => `
+    <tr>
+      <td>
+        <span class="coupon-code-badge">${c.code}</span>
+      </td>
+      <td>
+        <strong style="color: var(--accent); font-size: 1.05rem;">${c.discount}%</strong>
+      </td>
+      <td>
+        <span style="color: var(--accent); font-weight: 700; font-size: 0.85rem;">مفعل وجاهز</span>
+      </td>
+      <td>
+        <button class="btn-table-action delete" onclick="deleteCoupon('${c.code}')" title="حذف الكوبون">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="3 6 5 6 21 6"></polyline>
+            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+          </svg>
+        </button>
+      </td>
+    </tr>
+  `).join("");
+}
+
+/**
+ * حذف كوبون خصم من الإدارة
+ */
+function deleteCoupon(code) {
+  if (confirm(`هل أنت متأكد من رغبتك في حذف الكوبون (${code})؟`)) {
+    let coupons = loadCoupons();
+    coupons = coupons.filter(c => c.code.toUpperCase() !== code.toUpperCase());
+    saveCoupons(coupons);
+
+    // إذا كان نفس الكوبون مطبقاً في السلة، يتم إلغاؤه فوراً
+    if (appliedCoupon && appliedCoupon.code.toUpperCase() === code.toUpperCase()) {
+      appliedCoupon = null;
+      saveAppliedCoupon(null);
+    }
+
+    renderAdminCoupons();
+    showToast(`تم حذف الكوبون (${code}) بنجاح.`, "danger");
+  }
+}
+
+// تصدير الدوال للاستخدام العام
+window.applyCoupon = applyCoupon;
+window.removeAppliedCoupon = removeAppliedCoupon;
+window.deleteCoupon = deleteCoupon;
