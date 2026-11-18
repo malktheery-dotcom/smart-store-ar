@@ -5,12 +5,55 @@
  * ==========================================================================
  */
 
-// إعدادات المتجر العامة
+// مفاتيح التخزين وقيم الإعدادات الافتراضية
+const STORAGE_KEYS = {
+  PRODUCTS: "smartstore_products",
+  CART: "smartstore_cart",
+  SETTINGS: "smartstore_settings",
+  PIN: "smartstore_admin_pin"
+};
+
+const DEFAULT_SETTINGS = {
+  storePhone: "966501234567",
+  currency: "ر.س"
+};
+
+const DEFAULT_PIN = "1234";
+
+function loadStoreSettings() {
+  const stored = localStorage.getItem(STORAGE_KEYS.SETTINGS);
+  if (stored) {
+    try {
+      return { ...DEFAULT_SETTINGS, ...JSON.parse(stored) };
+    } catch (e) {
+      return { ...DEFAULT_SETTINGS };
+    }
+  }
+  return { ...DEFAULT_SETTINGS };
+}
+
+function saveStoreSettings(settings) {
+  localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(settings));
+}
+
+function getAdminPin() {
+  return localStorage.getItem(STORAGE_KEYS.PIN) || DEFAULT_PIN;
+}
+
+function setAdminPin(newPin) {
+  localStorage.setItem(STORAGE_KEYS.PIN, newPin);
+}
+
+let storeSettings = loadStoreSettings();
+
+// إعدادات المتجر الديناميكية
 const CONFIG = {
-  STORE_PHONE: "966501234567", // رقم هاتف المتجر بصيغة دولية بدون علامة +
-  CURRENCY: "ر.س",
-  PRODUCTS_KEY: "smartstore_products",
-  CART_KEY: "smartstore_cart"
+  get STORE_PHONE() { return storeSettings.storePhone; },
+  get CURRENCY() { return storeSettings.currency; },
+  PRODUCTS_KEY: STORAGE_KEYS.PRODUCTS,
+  CART_KEY: STORAGE_KEYS.CART,
+  SETTINGS_KEY: STORAGE_KEYS.SETTINGS,
+  PIN_KEY: STORAGE_KEYS.PIN
 };
 
 // المنتجات الافتراضية الأولية (6 منتجات نموذجية عالية الجودة)
@@ -131,7 +174,25 @@ const DOM = {
   adminCategoryFilter: document.getElementById("adminCategoryFilter"),
   statTotalProducts: document.getElementById("statTotalProducts"),
   statTotalCategories: document.getElementById("statTotalCategories"),
-  statAvgPrice: document.getElementById("statAvgPrice")
+  statAvgPrice: document.getElementById("statAvgPrice"),
+  adminPriceCurrency: document.getElementById("adminPriceCurrency"),
+
+  // شاشة القفل وإعدادات المتجر وتغيير الرمز
+  adminLockScreen: document.getElementById("adminLockScreen"),
+  lockScreenForm: document.getElementById("lockScreenForm"),
+  adminPinInput: document.getElementById("adminPinInput"),
+  pinErrorMessage: document.getElementById("pinErrorMessage"),
+  btnLockDashboard: document.getElementById("btnLockDashboard"),
+  storeSettingsForm: document.getElementById("storeSettingsForm"),
+  settingsStorePhone: document.getElementById("settingsStorePhone"),
+  settingsCurrency: document.getElementById("settingsCurrency"),
+  changePinModal: document.getElementById("changePinModal"),
+  btnOpenChangePin: document.getElementById("btnOpenChangePin"),
+  closePinModalBtn: document.getElementById("closePinModalBtn"),
+  changePinForm: document.getElementById("changePinForm"),
+  currentPinInput: document.getElementById("currentPinInput"),
+  newPinInput: document.getElementById("newPinInput"),
+  confirmPinInput: document.getElementById("confirmPinInput")
 };
 
 // ==========================================================================
@@ -152,6 +213,14 @@ function initApp() {
     updateCartUI();
   }
 
+  // تفعيل شاشة القفل وإعدادات لوحة التحكم إن وجدت
+  if (DOM.adminLockScreen) {
+    setupLockScreen();
+  }
+  if (DOM.storeSettingsForm) {
+    setupStoreSettings();
+  }
+
   // تفعيل واجهة لوحة التحكم إن كانت الصفحة هي لوحة التحكم
   if (DOM.adminProductForm) {
     setupAdminEventListeners();
@@ -164,6 +233,19 @@ function initApp() {
       loadProducts();
       if (DOM.productsGrid) renderProducts();
       if (DOM.adminProductForm) renderAdminProducts();
+    }
+    if (e.key === CONFIG.SETTINGS_KEY) {
+      storeSettings = loadStoreSettings();
+      if (DOM.productsGrid) {
+        renderProducts();
+        updateCartUI();
+      }
+      if (DOM.storeSettingsForm) {
+        populateStoreSettingsForm();
+      }
+      if (DOM.adminProductForm) {
+        renderAdminProducts();
+      }
     }
   });
 }
@@ -807,6 +889,10 @@ function updateAdminStats() {
       DOM.statAvgPrice.textContent = `${avg} ${CONFIG.CURRENCY}`;
     }
   }
+
+  if (DOM.adminPriceCurrency) {
+    DOM.adminPriceCurrency.textContent = CONFIG.CURRENCY;
+  }
 }
 
 /**
@@ -986,3 +1072,168 @@ window.editProduct = editProduct;
 window.deleteProduct = deleteProduct;
 window.cancelEdit = cancelEdit;
 window.resetDefaultProducts = resetDefaultProducts;
+
+
+// ==========================================================================
+// 8. شاشة القفل وإدارة رمز المرور (PIN Lock System)
+// ==========================================================================
+
+function setupLockScreen() {
+  const isAuth = sessionStorage.getItem("smartstore_admin_auth") === "true";
+  
+  if (isAuth && DOM.adminLockScreen) {
+    DOM.adminLockScreen.classList.add("unlocked");
+  } else if (DOM.adminLockScreen) {
+    DOM.adminLockScreen.classList.remove("unlocked");
+    setTimeout(() => {
+      if (DOM.adminPinInput) DOM.adminPinInput.focus();
+    }, 150);
+  }
+
+  // معالجة إدخال الرمز لفتح القفل
+  if (DOM.lockScreenForm) {
+    DOM.lockScreenForm.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const enteredPin = DOM.adminPinInput ? DOM.adminPinInput.value.trim() : "";
+      const validPin = getAdminPin();
+
+      if (enteredPin === validPin) {
+        sessionStorage.setItem("smartstore_admin_auth", "true");
+        if (DOM.adminLockScreen) DOM.adminLockScreen.classList.add("unlocked");
+        if (DOM.pinErrorMessage) DOM.pinErrorMessage.style.display = "none";
+        if (DOM.adminPinInput) DOM.adminPinInput.value = "";
+        showToast("تم التحقق بنجاح! مرحباً بك في لوحة تحكم متجر بوسلطان.", "success");
+      } else {
+        if (DOM.pinErrorMessage) {
+          DOM.pinErrorMessage.textContent = "رمز المرور غير صحيح! (الرمز الافتراضي هو 1234)";
+          DOM.pinErrorMessage.style.display = "block";
+        }
+        if (DOM.adminPinInput) {
+          DOM.adminPinInput.value = "";
+          DOM.adminPinInput.focus();
+        }
+      }
+    });
+  }
+
+  // زر قفل لوحة التحكم
+  if (DOM.btnLockDashboard) {
+    DOM.btnLockDashboard.addEventListener("click", lockDashboard);
+  }
+}
+
+function lockDashboard() {
+  sessionStorage.removeItem("smartstore_admin_auth");
+  if (DOM.adminLockScreen) {
+    DOM.adminLockScreen.classList.remove("unlocked");
+    if (DOM.pinErrorMessage) DOM.pinErrorMessage.style.display = "none";
+    if (DOM.adminPinInput) {
+      DOM.adminPinInput.value = "";
+      setTimeout(() => DOM.adminPinInput.focus(), 200);
+    }
+  }
+  showToast("تم قفل لوحة التحكم.", "info");
+}
+
+// ==========================================================================
+// 9. قسم إعدادات المتجر (Store Settings & Dynamic Config)
+// ==========================================================================
+
+function setupStoreSettings() {
+  populateStoreSettingsForm();
+
+  // حفظ الإعدادات
+  if (DOM.storeSettingsForm) {
+    DOM.storeSettingsForm.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const phone = DOM.settingsStorePhone.value.trim().replace(/[^0-9]/g, "");
+      const currency = DOM.settingsCurrency.value.trim();
+
+      if (!phone) {
+        showToast("يرجى إدخال رقم هاتف واتساب صالح (أرقام فقط)!", "danger");
+        return;
+      }
+
+      if (!currency) {
+        showToast("يرجى إدخال رمز أو اسم العملة!", "danger");
+        return;
+      }
+
+      storeSettings = { storePhone: phone, currency: currency };
+      saveStoreSettings(storeSettings);
+
+      // تحديث الجدول والإحصائيات بالعملة الجديدة فوراً
+      renderAdminProducts();
+      showToast("تم حفظ إعدادات المتجر وتحديث العملة ورقم الواتساب بنجاح!", "success");
+    });
+  }
+
+  // فتح وإغلاق نافذة تغيير رمز المرور
+  if (DOM.btnOpenChangePin) {
+    DOM.btnOpenChangePin.addEventListener("click", openChangePinModal);
+  }
+
+  if (DOM.closePinModalBtn) {
+    DOM.closePinModalBtn.addEventListener("click", closeChangePinModal);
+  }
+
+  if (DOM.changePinModal) {
+    DOM.changePinModal.addEventListener("click", (e) => {
+      if (e.target === DOM.changePinModal) closeChangePinModal();
+    });
+  }
+
+  // معالجة نموذج تغيير رمز المرور
+  if (DOM.changePinForm) {
+    DOM.changePinForm.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const currentPin = DOM.currentPinInput.value.trim();
+      const newPin = DOM.newPinInput.value.trim();
+      const confirmPin = DOM.confirmPinInput.value.trim();
+      const actualPin = getAdminPin();
+
+      if (currentPin !== actualPin) {
+        showToast("رمز المرور الحالي غير صحيح!", "danger");
+        DOM.currentPinInput.focus();
+        return;
+      }
+
+      if (newPin.length < 4) {
+        showToast("يجب أن يتكون رمز المرور الجديد من 4 خانات على الأقل!", "danger");
+        DOM.newPinInput.focus();
+        return;
+      }
+
+      if (newPin !== confirmPin) {
+        showToast("تأكيد رمز المرور الجديد غير متطابق!", "danger");
+        DOM.confirmPinInput.focus();
+        return;
+      }
+
+      setAdminPin(newPin);
+      closeChangePinModal();
+      showToast(`تم تغيير رمز المرور بنجاح! رمزك الجديد هو (${newPin}).`, "success");
+    });
+  }
+}
+
+function populateStoreSettingsForm() {
+  if (DOM.settingsStorePhone) DOM.settingsStorePhone.value = storeSettings.storePhone;
+  if (DOM.settingsCurrency) DOM.settingsCurrency.value = storeSettings.currency;
+}
+
+function openChangePinModal() {
+  if (!DOM.changePinModal) return;
+  DOM.changePinForm.reset();
+  DOM.changePinModal.classList.add("active");
+  if (DOM.currentPinInput) DOM.currentPinInput.focus();
+}
+
+function closeChangePinModal() {
+  if (!DOM.changePinModal) return;
+  DOM.changePinModal.classList.remove("active");
+}
+
+window.lockDashboard = lockDashboard;
+window.openChangePinModal = openChangePinModal;
+window.closeChangePinModal = closeChangePinModal;

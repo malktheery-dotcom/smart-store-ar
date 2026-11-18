@@ -16,6 +16,40 @@
 <body>
 
   <!-- ==========================================================================
+       شاشة القفل برمز مرور (PIN Lock Screen)
+       ========================================================================== -->
+  <div id="adminLockScreen" class="admin-lock-overlay">
+    <div class="admin-lock-box">
+      <div class="lock-icon-wrapper">
+        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+          <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+        </svg>
+      </div>
+      <h2 class="lock-title">لوحة تحكم متجر بوسلطان</h2>
+      <p class="lock-subtitle">المنطقة مخصصة للإدارة فقط. يرجى إدخال رمز المرور السري (PIN) للمتابعة.</p>
+      
+      <form id="lockScreenForm">
+        <div class="pin-input-group">
+          <input type="password" id="adminPinInput" class="pin-input" placeholder="••••" maxlength="10" autocomplete="off" required>
+        </div>
+        <div id="pinErrorMessage" class="pin-error-msg" style="display: none;"></div>
+        <button type="submit" class="btn-primary" style="width: 100%; margin-top: 1.25rem; padding: 0.9rem;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="9 18 15 12 9 6"></polyline>
+          </svg>
+          <span>تسجيل الدخول للوحة الإدارة</span>
+        </button>
+      </form>
+      
+      <div class="lock-footer">
+        <p>الرمز الافتراضي: <code>1234</code></p>
+        <a href="index.html" class="back-to-store-link">← العودة إلى واجهة المتجر</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================================================
        الهيدر وشريط التنقل العلوي
        ========================================================================== -->
   <header class="site-header">
@@ -37,6 +71,15 @@
 
       <!-- الإجراءات السريعة -->
       <div class="header-actions">
+        <!-- زر قفل اللوحة -->
+        <button id="btnLockDashboard" class="btn-lock-dash" title="قفل لوحة التحكم فوراً">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+          </svg>
+          <span>قفل اللوحة</span>
+        </button>
+
         <a href="index.html" class="btn-secondary" title="زيارة واجهة المتجر">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <polyline points="15 18 9 12 15 6"></polyline>
@@ -133,6 +176,63 @@
         </div>
       </div>
 
+      <!-- بطاقة إعدادات المتجر العامة -->
+      <section class="admin-card" id="storeSettingsSection">
+        <div class="admin-card-header">
+          <h2 class="admin-card-title">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="3"></circle>
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+            </svg>
+            <span>إعدادات المتجر العامة</span>
+          </h2>
+          <span style="font-size: 0.85rem; color: var(--text-muted);">تُطبق التغييرات لحظياً في المتجر وسلة الشراء والواتساب</span>
+        </div>
+
+        <div class="admin-card-body">
+          <form id="storeSettingsForm">
+            <div class="form-grid-2">
+              <!-- رقم الواتساب -->
+              <div class="form-group">
+                <label for="settingsStorePhone" class="form-label">رقم هاتف الواتساب لاستقبال الطلبات <span class="req">*</span></label>
+                <input type="tel" id="settingsStorePhone" class="form-control" placeholder="966501234567" dir="ltr" required>
+                <small style="color: var(--text-muted); font-size: 0.82rem; margin-top: 0.35rem; display: block;">
+                  أدخل الرقم بالصيغة الدولية للأرقام فقط بدون (+) مثل: <code>966501234567</code>
+                </small>
+              </div>
+
+              <!-- رمز العملة -->
+              <div class="form-group">
+                <label for="settingsCurrency" class="form-label">رمز أو اسم العملة <span class="req">*</span></label>
+                <input type="text" id="settingsCurrency" class="form-control" placeholder="ر.س" required>
+                <small style="color: var(--text-muted); font-size: 0.82rem; margin-top: 0.35rem; display: block;">
+                  تظهر في أسعار المنتجات والسلة ورسائل الواتساب (مثال: <code>ر.س</code> أو <code>$</code> أو <code>د.إ</code>)
+                </small>
+              </div>
+            </div>
+
+            <div class="form-actions" style="justify-content: space-between; flex-wrap: wrap;">
+              <button type="submit" class="btn-primary">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                  <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                  <polyline points="7 3 7 8 15 8"></polyline>
+                </svg>
+                <span>حفظ إعدادات المتجر</span>
+              </button>
+
+              <button type="button" id="btnOpenChangePin" class="btn-secondary" style="border-color: #cbd5e1;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                  <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                </svg>
+                <span>تغيير رمز المرور (PIN)</span>
+              </button>
+            </div>
+          </form>
+        </div>
+      </section>
+
       <!-- بطاقة نموذج إضافة / تعديل منتج -->
       <section class="admin-card">
         <div class="admin-card-header">
@@ -171,7 +271,7 @@
 
               <!-- السعر الحالي -->
               <div class="form-group">
-                <label for="adminProductPrice" class="form-label">السعر الحالي (ر.س) <span class="req">*</span></label>
+                <label for="adminProductPrice" class="form-label">السعر الحالي (<span id="adminPriceCurrency">ر.س</span>) <span class="req">*</span></label>
                 <input type="number" id="adminProductPrice" class="form-control" placeholder="مثال: 299" min="1" step="any" required>
               </div>
 
@@ -287,6 +387,52 @@
 
     </div>
   </main>
+
+  <!-- ==========================================================================
+       نافذة تغيير رمز المرور المنبثقة (Change PIN Modal)
+       ========================================================================== -->
+  <div id="changePinModal" class="modal-overlay">
+    <div class="modal-content" style="max-width: 440px;">
+      <div class="modal-header">
+        <h3 class="modal-title">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+          </svg>
+          <span>تغيير رمز المرور (PIN)</span>
+        </h3>
+        <button id="closePinModalBtn" class="btn-close-drawer" title="إغلاق">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+
+      <div class="modal-body">
+        <form id="changePinForm">
+          <div class="form-group">
+            <label for="currentPinInput" class="form-label">رمز المرور الحالي <span class="req">*</span></label>
+            <input type="password" id="currentPinInput" class="form-control" placeholder="الرمز الحالي (الافتراضي 1234)" required>
+          </div>
+
+          <div class="form-group">
+            <label for="newPinInput" class="form-label">رمز المرور الجديد <span class="req">*</span></label>
+            <input type="password" id="newPinInput" class="form-control" placeholder="أدخل 4 أرقام أو أكثر" minlength="4" required>
+          </div>
+
+          <div class="form-group">
+            <label for="confirmPinInput" class="form-label">تأكيد رمز المرور الجديد <span class="req">*</span></label>
+            <input type="password" id="confirmPinInput" class="form-control" placeholder="أعد إدخال الرمز الجديد" minlength="4" required>
+          </div>
+
+          <button type="submit" class="btn-primary" style="width: 100%; margin-top: 1rem; padding: 0.9rem;">
+            <span>تحديث وحفظ رمز المرور</span>
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
 
   <!-- حاوية التنبيهات العائمة -->
   <div id="toastContainer" class="toast-container"></div>
