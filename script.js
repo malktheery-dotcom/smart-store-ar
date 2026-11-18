@@ -574,7 +574,7 @@ function handleOrderSubmit(e) {
   const totalPrice = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
 
   // صياغة رسالة واتساب منسقة وأنيقة
-  let message = `🛒 *طلب جديد من المتجر الإلكتروني*\n`;
+  let message = `🛒 *طلب جديد من متجر بوسلطان*\n`;
   message += `━━━━━━━━━━━━━━━━━━━━━\n`;
   message += `🔖 *رقم الطلب:* #${orderNumber}\n`;
   message += `📅 *التاريخ:* ${orderDate}\n`;
