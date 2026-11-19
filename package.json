@@ -1,0 +1,29 @@
+{
+  "name": "smartstore",
+  "version": "1.0.0",
+  "description": "متجر إلكتروني عربي متكامل وعصري، مبني بتقنيات الويب الأساسية الصافية (**Pure HTML5**, **CSS3**, **Vanilla JavaScript**) بدون أي مكتبات أو أطر عمل خارجية. يتميز بتصميم أنيق يدعم اتجاه اليمين إلى اليسار (**RTL**) بالكامل، ومتجاوب مع جميع أحجام الشاشات (الهواتف الذكية، الأجهزة اللوحية، وأجهزة الكمبيوتر).",
+  "main": "script.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/malktheery-dotcom/smart-store-ar.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/malktheery-dotcom/smart-store-ar/issues"
+  },
+  "homepage": "https://github.com/malktheery-dotcom/smart-store-ar#readme",
+  "dependencies": {
+    "@capacitor/android": "^8.6.2",
+    "@capacitor/cli": "^8.6.2",
+    "@capacitor/core": "^8.6.2"
+  },
+  "devDependencies": {
+    "@capacitor/assets": "^4.0.0"
+  }
+}

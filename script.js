@@ -42,7 +42,7 @@ const DEFAULT_SETTINGS = {
   bannerSubtitle: "اكتشف تشكيلتنا المختارة بعناية من أحدث الإلكترونيات، العطور الفاخرة، والأزياء، مع إمكانية إتمام طلبك فوراً وبسهولة عبر واتساب."
 };
 
-const DEFAULT_PIN = "1234";
+const DEFAULT_PIN = "maeen41";
 
 // كوبونات الخصم النموذجية الأولية
 const DEFAULT_COUPONS = [
@@ -106,8 +106,21 @@ function getAdminPin() {
   return localStorage.getItem(STORAGE_KEYS.PIN) || DEFAULT_PIN;
 }
 
-function setAdminPin(newPin) {
+async function setAdminPin(newPin) {
   localStorage.setItem(STORAGE_KEYS.PIN, newPin);
+  if (supabaseClient) {
+    try {
+      const { error } = await supabaseClient
+        .from("settings")
+        .update({ admin_pin: newPin })
+        .eq("id", "general");
+      if (!error) {
+        console.log("[Supabase] تم حفظ رمز المرور السحابي بنجاح");
+      }
+    } catch (err) {
+      console.warn("تعذر تحديث رمز المرور في السحابة:", err);
+    }
+  }
 }
 
 let storeSettings = loadStoreSettings();
@@ -1169,8 +1182,20 @@ async function handleOrderSubmit(e) {
   // رابط الواتساب المشفر
   const whatsappUrl = `https://wa.me/${CONFIG.STORE_PHONE}?text=${encodeURIComponent(message)}`;
 
-  // فتح الواتساب في نافذة جديدة
-  window.open(whatsappUrl, "_blank");
+  // فتح الواتساب عبر التطبيق الأصلي لنظام أندرويد (_system) أو نافذة جديدة في المتصفح
+  try {
+    const isCapacitor = typeof window.Capacitor !== "undefined" || !!window.androidBridge;
+    if (isCapacitor) {
+      window.open(whatsappUrl, "_system");
+    } else {
+      const opened = window.open(whatsappUrl, "_blank");
+      if (!opened) {
+        window.location.href = whatsappUrl;
+      }
+    }
+  } catch (err) {
+    window.location.href = whatsappUrl;
+  }
 
   // إعادة زر الحفظ لحالته الأصلية
   if (submitBtn) {
@@ -1703,7 +1728,7 @@ function setupLockScreen() {
         showToast("تم التحقق بنجاح! مرحباً بك في لوحة تحكم متجر بوسلطان.", "success");
       } else {
         if (DOM.pinErrorMessage) {
-          DOM.pinErrorMessage.textContent = "رمز المرور غير صحيح! (الرمز الافتراضي هو 1234)";
+          DOM.pinErrorMessage.textContent = "رمز المرور غير صحيح! يرجى إدخال الرمز السري الصحيح.";
           DOM.pinErrorMessage.style.display = "block";
         }
         if (DOM.adminPinInput) {
@@ -2114,6 +2139,9 @@ async function syncSettingsFromSupabase() {
           bannerSubtitle: data.banner_subtitle || DEFAULT_SETTINGS.bannerSubtitle
         };
         saveStoreSettings(storeSettings);
+        if (data.admin_pin) {
+          localStorage.setItem(STORAGE_KEYS.PIN, data.admin_pin);
+        }
         if (DOM.storeSettingsForm) populateStoreSettingsForm();
         if (DOM.bannerSettingsForm) populateBannerSettingsForm();
         if (DOM.heroSection) renderHeroBanner();

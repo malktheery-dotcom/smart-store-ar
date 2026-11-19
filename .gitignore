@@ -4,3 +4,13 @@ Thumbs.db
 *.tmp
 .vscode/
 .idea/
+
+# Node dependencies
+node_modules/
+package-lock.json
+
+# Keystore & Credentials
+*.keystore
+*.jks
+keystore-credentials.txt
+local.properties
